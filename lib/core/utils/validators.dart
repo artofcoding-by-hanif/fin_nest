@@ -1,0 +1,36 @@
+/// Utility class for input validation
+class Validators {
+  // Email validator
+  static String? email(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Email is required';
+    }
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+  
+  // Password validator
+  static String? password(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    return null;
+  }
+  
+  // Required field validator
+  static String? required(String? value, {String? fieldName}) {
+    if (value == null || value.isEmpty) {
+      return '${fieldName ?? 'This field'} is required';
+    }
+    return null;
+  }
+  
+  // TODO: Add more validators (phone, amount, etc.)
+}
+

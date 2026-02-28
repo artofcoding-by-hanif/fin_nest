@@ -1,0 +1,12 @@
+{
+  "@@locale": "en",
+  "appName": "FinNest",
+  "@appName": {
+    "description": "The application name"
+  },
+  "welcome": "Welcome to FinNest",
+  "@welcome": {
+    "description": "Welcome message"
+  }
+}
+
