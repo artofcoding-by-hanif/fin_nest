@@ -5,6 +5,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/recurring_transactions_table.dart';
 import '../../../../core/database/tables/transactions_table.dart';
 import '../../../../core/widgets/currency_text.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../providers/recurring_transaction_provider.dart';
 import 'add_recurring_transaction_screen.dart';
 import 'edit_recurring_transaction_screen.dart';
@@ -29,13 +31,12 @@ class _RecurringTransactionsListScreenState
       allRecurringTransactionsProvider,
     );
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Recurring Transactions'),
-        elevation: 0,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.filter_list_rounded),
             onSelected: (value) {
               setState(() {
                 if (value == 'active') {
@@ -51,9 +52,9 @@ class _RecurringTransactionsListScreenState
                 child: Row(
                   children: [
                     Icon(
-                      Icons.check_circle,
+                      Icons.check_circle_rounded,
                       color: _showInactiveOnly
-                          ? null
+                          ? theme.colorScheme.onSurfaceVariant
                           : theme.colorScheme.primary,
                     ),
                     const SizedBox(width: 8),
@@ -66,10 +67,10 @@ class _RecurringTransactionsListScreenState
                 child: Row(
                   children: [
                     Icon(
-                      Icons.cancel,
+                      Icons.cancel_rounded,
                       color: _showInactiveOnly
                           ? theme.colorScheme.primary
-                          : null,
+                          : theme.colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 8),
                     const Text('Inactive Only'),
@@ -88,33 +89,13 @@ class _RecurringTransactionsListScreenState
               : transactions.where((t) => t.isActive).toList();
 
           if (filteredTransactions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.repeat,
-                    size: 64,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _showInactiveOnly
-                        ? 'No inactive recurring transactions'
-                        : 'No recurring transactions yet',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tap the + button to add one',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                  ),
-                ],
-              ),
+            return EmptyState(
+              title: _showInactiveOnly
+                  ? 'No inactive recurring transactions'
+                  : 'No recurring transactions yet',
+              message: 'Tap the + button to add one',
+              icon: Icons.repeat_rounded,
+              color: theme.colorScheme.primary,
             );
           }
 
@@ -122,7 +103,7 @@ class _RecurringTransactionsListScreenState
           final groupedTransactions = _groupByFrequency(filteredTransactions);
 
           return ListView.builder(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
             itemCount: groupedTransactions.length,
             itemBuilder: (context, index) {
               final entry = groupedTransactions.entries.elementAt(index);
@@ -132,14 +113,14 @@ class _RecurringTransactionsListScreenState
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (index > 0) const SizedBox(height: 24),
+                  if (index > 0) const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.only(left: 16, bottom: 8),
+                    padding: const EdgeInsets.only(left: 4, bottom: 10),
                     child: Text(
                       _getFrequencyGroupLabel(frequency),
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: theme.textTheme.labelMedium?.copyWith(
                         color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.4,
                       ),
                     ),
                   ),
@@ -156,10 +137,20 @@ class _RecurringTransactionsListScreenState
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) =>
-            Center(child: Text('Error loading recurring transactions: $error')),
+        error: (error, stack) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Error loading recurring transactions: $error',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+        ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GradientFab(
         onPressed: () {
           Navigator.push(
             context,
@@ -168,7 +159,8 @@ class _RecurringTransactionsListScreenState
             ),
           );
         },
-        child: const Icon(Icons.add),
+        icon: Icons.add_rounded,
+        tooltip: 'Add recurring transaction',
       ),
     );
   }
@@ -250,137 +242,133 @@ class _RecurringTransactionCard extends ConsumerWidget {
         ? ref.watch(expenseCategoriesProvider)
         : ref.watch(incomeCategoriesProvider);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final glass = context.glass;
+    final typeColor = isExpense ? glass.expense : glass.income;
+    final category = transaction.categoryId == null
+        ? null
+        : categoriesAsync.asData?.value.cast<CategoryEntity?>().firstWhere(
+            (c) => c?.id == transaction.categoryId,
+            orElse: () => null,
+          );
+    final muted = theme.colorScheme.onSurfaceVariant;
+
+    return GlassCard(
+      blur: false,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      radius: AppTheme.radiusM,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  // Transaction type icon
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isExpense
-                          ? theme.colorScheme.errorContainer
-                          : theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      isExpense
-                          ? Icons.remove_circle_outline
-                          : Icons.add_circle_outline,
-                      color: isExpense
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Description and category
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          transaction.description,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        categoriesAsync.when(
-                          data: (categories) {
-                            if (transaction.categoryId == null) {
-                              return Text(
-                                'No category',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            final category = categories
-                                .cast<CategoryEntity?>()
-                                .firstWhere(
-                                  (c) => c?.id == transaction.categoryId,
-                                  orElse: () => null,
-                                );
-
-                            return Text(
-                              category?.name ?? 'Unknown category',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.onSurface.withValues(
-                                  alpha: 0.6,
-                                ),
-                              ),
-                            );
-                          },
-                          loading: () => const SizedBox.shrink(),
-                          error: (error, stack) => const SizedBox.shrink(),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Amount
-                  Text(
-                    formattedAmount,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: isExpense
-                          ? theme.colorScheme.error
-                          : theme.colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+              // Category / transaction type icon
+              GlassIcon(
+                category != null
+                    ? CategoryVisuals.icon(
+                        category.icon,
+                        fallback: isExpense
+                            ? Icons.remove_circle_outline_rounded
+                            : Icons.add_circle_outline_rounded,
+                      )
+                    : (isExpense
+                          ? Icons.remove_circle_outline_rounded
+                          : Icons.add_circle_outline_rounded),
+                color: category != null
+                    ? CategoryVisuals.vivid(category.color, fallback: typeColor)
+                    : typeColor,
+                size: 44,
               ),
-              const SizedBox(height: 12),
-              // Next occurrence and status
-              Row(
-                children: [
-                  Icon(
-                    Icons.event,
-                    size: 16,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Next: ${DateFormat('MMM dd, yyyy').format(transaction.nextOccurrence)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const Spacer(),
-                  if (!transaction.isActive)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        'INACTIVE',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.error,
-                          fontWeight: FontWeight.bold,
-                        ),
+              const SizedBox(width: 14),
+              // Description and category
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      transaction.description,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                ],
+                    const SizedBox(height: 3),
+                    categoriesAsync.when(
+                      data: (categories) {
+                        if (transaction.categoryId == null) {
+                          return Text(
+                            'No category',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: muted,
+                            ),
+                          );
+                        }
+
+                        final category = categories
+                            .cast<CategoryEntity?>()
+                            .firstWhere(
+                              (c) => c?.id == transaction.categoryId,
+                              orElse: () => null,
+                            );
+
+                        return Text(
+                          category?.name ?? 'Unknown category',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (error, stack) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Amount
+              Text(
+                formattedAmount,
+                style: AppTypography.amount(18).copyWith(color: typeColor),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          // Next occurrence and status
+          Row(
+            children: [
+              Icon(Icons.event_rounded, size: 16, color: muted),
+              const SizedBox(width: 6),
+              Text(
+                'Next: ${DateFormat('MMM dd, yyyy').format(transaction.nextOccurrence)}',
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+              const Spacer(),
+              if (!transaction.isActive)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: glass.expense.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(100),
+                    border: Border.all(
+                      color: glass.expense.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    'INACTIVE',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: glass.expense,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -408,213 +396,195 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
         : ref.watch(incomeCategoriesProvider);
     final accountsAsync = ref.watch(userAccountsProvider);
 
+    final glass = context.glass;
+    final typeColor = isExpense ? glass.expense : glass.income;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.5,
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: isExpense
-                            ? theme.colorScheme.errorContainer
-                            : theme.colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        isExpense ? Icons.remove_circle : Icons.add_circle,
-                        color: isExpense
-                            ? theme.colorScheme.error
-                            : theme.colorScheme.primary,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            transaction.description,
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            formattedAmount,
-                            style: theme.textTheme.headlineSmall?.copyWith(
-                              color: isExpense
-                                  ? theme.colorScheme.error
-                                  : theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Details
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _DetailRow(
-                      icon: Icons.category,
-                      label: 'Category',
-                      value: categoriesAsync.when(
-                        data: (categories) {
-                          if (transaction.categoryId == null) {
-                            return 'No category';
-                          }
-
-                          final category = categories
-                              .cast<CategoryEntity?>()
-                              .firstWhere(
-                                (c) => c?.id == transaction.categoryId,
-                                orElse: () => null,
-                              );
-                          return category?.name ?? 'Unknown category';
-                        },
-                        loading: () => 'Loading...',
-                        error: (error, stack) => 'Unknown',
-                      ),
-                    ),
-                    _DetailRow(
-                      icon: Icons.account_balance_wallet,
-                      label: 'Account',
-                      value: accountsAsync.when(
-                        data: (accounts) {
-                          final account = accounts.firstWhere(
-                            (a) => a.id == transaction.accountId,
-                            orElse: () => accounts.first,
-                          );
-                          return account.name;
-                        },
-                        loading: () => 'Loading...',
-                        error: (error, stack) => 'Unknown',
-                      ),
-                    ),
-                    _DetailRow(
-                      icon: Icons.repeat,
-                      label: 'Frequency',
-                      value: _getFrequencyLabel(transaction.frequency),
-                    ),
-                    _DetailRow(
-                      icon: Icons.event,
-                      label: 'Start Date',
-                      value: DateFormat(
-                        'MMM dd, yyyy',
-                      ).format(transaction.startDate),
-                    ),
-                    _DetailRow(
-                      icon: Icons.event_busy,
-                      label: 'End Date',
-                      value: transaction.endDate != null
-                          ? DateFormat(
-                              'MMM dd, yyyy',
-                            ).format(transaction.endDate!)
-                          : 'No end date',
-                    ),
-                    _DetailRow(
-                      icon: Icons.event_available,
-                      label: 'Next Occurrence',
-                      value: DateFormat(
-                        'MMM dd, yyyy',
-                      ).format(transaction.nextOccurrence),
-                    ),
-                    if (transaction.lastOccurrence != null)
-                      _DetailRow(
-                        icon: Icons.history,
-                        label: 'Last Occurrence',
-                        value: DateFormat(
-                          'MMM dd, yyyy',
-                        ).format(transaction.lastOccurrence!),
-                      ),
-                    if (transaction.payee != null)
-                      _DetailRow(
-                        icon: Icons.person,
-                        label: 'Payee',
-                        value: transaction.payee!,
-                      ),
-                    _DetailRow(
-                      icon: Icons.auto_awesome,
-                      label: 'Auto-create',
-                      value: transaction.autoCreate ? 'Enabled' : 'Disabled',
-                    ),
-                    if (transaction.autoCreate)
-                      _DetailRow(
-                        icon: Icons.schedule,
-                        label: 'Create before',
-                        value: _getDaysBeforeLabel(
-                          transaction.daysBeforeToCreate,
+        return Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              child: Row(
+                children: [
+                  GlassIcon(
+                    isExpense
+                        ? Icons.remove_circle_outline_rounded
+                        : Icons.add_circle_outline_rounded,
+                    color: typeColor,
+                    size: 56,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          transaction.description,
+                          style: theme.textTheme.titleLarge,
                         ),
-                      ),
-                    if (transaction.notes != null &&
-                        transaction.notes!.isNotEmpty)
-                      _DetailRow(
-                        icon: Icons.notes,
-                        label: 'Notes',
-                        value: transaction.notes!,
-                      ),
-                    _DetailRow(
-                      icon: Icons.info,
-                      label: 'Status',
-                      value: transaction.isActive ? 'Active' : 'Inactive',
+                        const SizedBox(height: 4),
+                        Text(
+                          formattedAmount,
+                          style: AppTypography.amount(
+                            26,
+                          ).copyWith(color: typeColor),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              // Action buttons
-              Padding(
-                padding: const EdgeInsets.all(16),
+            ),
+            // Details
+            Expanded(
+              child: ListView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                children: [
+                  GlassCard(
+                    blur: false,
+                    radius: AppTheme.radiusM,
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Column(
+                      children: [
+                        _DetailRow(
+                          icon: Icons.category_rounded,
+                          label: 'Category',
+                          value: categoriesAsync.when(
+                            data: (categories) {
+                              if (transaction.categoryId == null) {
+                                return 'No category';
+                              }
+
+                              final category = categories
+                                  .cast<CategoryEntity?>()
+                                  .firstWhere(
+                                    (c) => c?.id == transaction.categoryId,
+                                    orElse: () => null,
+                                  );
+                              return category?.name ?? 'Unknown category';
+                            },
+                            loading: () => 'Loading...',
+                            error: (error, stack) => 'Unknown',
+                          ),
+                        ),
+                        _DetailRow(
+                          icon: Icons.account_balance_wallet_rounded,
+                          label: 'Account',
+                          value: accountsAsync.when(
+                            data: (accounts) {
+                              final account = accounts.firstWhere(
+                                (a) => a.id == transaction.accountId,
+                                orElse: () => accounts.first,
+                              );
+                              return account.name;
+                            },
+                            loading: () => 'Loading...',
+                            error: (error, stack) => 'Unknown',
+                          ),
+                        ),
+                        _DetailRow(
+                          icon: Icons.repeat_rounded,
+                          label: 'Frequency',
+                          value: _getFrequencyLabel(transaction.frequency),
+                        ),
+                        _DetailRow(
+                          icon: Icons.event_rounded,
+                          label: 'Start Date',
+                          value: DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(transaction.startDate),
+                        ),
+                        _DetailRow(
+                          icon: Icons.event_busy_rounded,
+                          label: 'End Date',
+                          value: transaction.endDate != null
+                              ? DateFormat(
+                                  'MMM dd, yyyy',
+                                ).format(transaction.endDate!)
+                              : 'No end date',
+                        ),
+                        _DetailRow(
+                          icon: Icons.event_available_rounded,
+                          label: 'Next Occurrence',
+                          value: DateFormat(
+                            'MMM dd, yyyy',
+                          ).format(transaction.nextOccurrence),
+                        ),
+                        if (transaction.lastOccurrence != null)
+                          _DetailRow(
+                            icon: Icons.history_rounded,
+                            label: 'Last Occurrence',
+                            value: DateFormat(
+                              'MMM dd, yyyy',
+                            ).format(transaction.lastOccurrence!),
+                          ),
+                        if (transaction.payee != null)
+                          _DetailRow(
+                            icon: Icons.person_rounded,
+                            label: 'Payee',
+                            value: transaction.payee!,
+                          ),
+                        _DetailRow(
+                          icon: Icons.auto_awesome_rounded,
+                          label: 'Auto-create',
+                          value: transaction.autoCreate ? 'Enabled' : 'Disabled',
+                        ),
+                        if (transaction.autoCreate)
+                          _DetailRow(
+                            icon: Icons.schedule_rounded,
+                            label: 'Create before',
+                            value: _getDaysBeforeLabel(
+                              transaction.daysBeforeToCreate,
+                            ),
+                          ),
+                        if (transaction.notes != null &&
+                            transaction.notes!.isNotEmpty)
+                          _DetailRow(
+                            icon: Icons.notes_rounded,
+                            label: 'Notes',
+                            value: transaction.notes!,
+                          ),
+                        _DetailRow(
+                          icon: Icons.info_rounded,
+                          label: 'Status',
+                          value: transaction.isActive ? 'Active' : 'Inactive',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Action buttons
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: Column(
                   children: [
                     // Edit button
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditRecurringTransactionScreen(
-                                recurringTransaction: transaction,
-                              ),
+                    GradientButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EditRecurringTransactionScreen(
+                              recurringTransaction: transaction,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit'),
-                      ),
+                          ),
+                        );
+                      },
+                      icon: Icons.edit_rounded,
+                      label: 'Edit',
+                      height: 52,
                     ),
                     const SizedBox(height: 12),
                     // Activate/Deactivate and Delete buttons
@@ -645,8 +615,8 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
                             },
                             icon: Icon(
                               transaction.isActive
-                                  ? Icons.pause_circle
-                                  : Icons.play_circle,
+                                  ? Icons.pause_circle_rounded
+                                  : Icons.play_circle_rounded,
                             ),
                             label: Text(
                               transaction.isActive ? 'Deactivate' : 'Activate',
@@ -655,7 +625,7 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
                         ),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: FilledButton.icon(
+                          child: OutlinedButton.icon(
                             onPressed: () async {
                               final confirmed = await showDialog<bool>(
                                 context: context,
@@ -676,8 +646,8 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
                                       onPressed: () =>
                                           Navigator.pop(context, true),
                                       style: FilledButton.styleFrom(
-                                        backgroundColor:
-                                            theme.colorScheme.error,
+                                        backgroundColor: glass.expense,
+                                        foregroundColor: Colors.white,
                                       ),
                                       child: const Text('DELETE'),
                                     ),
@@ -702,10 +672,13 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
                                 }
                               }
                             },
-                            icon: const Icon(Icons.delete),
+                            icon: const Icon(Icons.delete_outline_rounded),
                             label: const Text('Delete'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: theme.colorScheme.error,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: glass.expense,
+                              side: BorderSide(
+                                color: glass.expense.withValues(alpha: 0.5),
+                              ),
                             ),
                           ),
                         ),
@@ -714,8 +687,8 @@ class _RecurringTransactionDetailsSheet extends ConsumerWidget {
                   ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
@@ -767,8 +740,13 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: theme.colorScheme.primary),
-          const SizedBox(width: 12),
+          GlassIcon(
+            icon,
+            color: theme.colorScheme.primary,
+            size: 36,
+            glow: false,
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,10 +754,10 @@ class _DetailRow extends StatelessWidget {
                 Text(
                   label,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   value,
                   style: theme.textTheme.bodyLarge?.copyWith(

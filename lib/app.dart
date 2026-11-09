@@ -8,6 +8,8 @@ import 'features/dashboard/presentation/pages/dashboard_screen.dart';
 import 'core/providers/settings_provider.dart';
 import 'core/providers/app_lock_provider.dart';
 import 'core/widgets/app_lock_screen.dart';
+import 'core/widgets/glass/glass_scaffold.dart';
+import 'core/widgets/loading_indicator.dart';
 import 'features/onboarding/presentation/screens/splash_screen.dart';
 import 'features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'features/onboarding/presentation/providers/onboarding_provider.dart';
@@ -114,7 +116,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
           // Don't show lock screen during onboarding
           return _buildOnboardingOrDashboard(completed);
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const GlassScaffold(body: LoadingIndicator()),
         error: (_, __) => _buildOnboardingOrDashboard(false),
       );
     }
@@ -122,7 +124,7 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     // Show onboarding or dashboard based on completion status
     return onboardingState.when(
       data: (completed) => _buildOnboardingOrDashboard(completed),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const GlassScaffold(body: LoadingIndicator()),
       error: (_, __) => _buildOnboardingOrDashboard(false),
     );
   }

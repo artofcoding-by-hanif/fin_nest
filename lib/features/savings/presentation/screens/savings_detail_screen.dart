@@ -4,7 +4,12 @@ import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/savings_transactions_table.dart';
 import '../../../../core/widgets/currency_text.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/glass/glass.dart';
+import '../../../../core/widgets/loading_indicator.dart';
 import '../providers/savings_transactions_provider.dart';
+import 'add_edit_savings_screen.dart';
 import 'add_savings_transaction_screen.dart';
 
 /// Date range filter options for savings transaction history
@@ -68,53 +73,6 @@ class SavingsDetailScreen extends ConsumerWidget {
 
   const SavingsDetailScreen({super.key, required this.savings});
 
-  String _getTransactionTypeLabel(SavingsTransactionType type) {
-    switch (type) {
-      case SavingsTransactionType.deposit:
-        return 'Deposit';
-      case SavingsTransactionType.withdrawal:
-        return 'Withdrawal';
-      case SavingsTransactionType.interest:
-        return 'Interest';
-      case SavingsTransactionType.dividend:
-        return 'Dividend';
-      case SavingsTransactionType.appreciation:
-        return 'Appreciation';
-      case SavingsTransactionType.depreciation:
-        return 'Depreciation';
-    }
-  }
-
-  IconData _getTransactionTypeIcon(SavingsTransactionType type) {
-    switch (type) {
-      case SavingsTransactionType.deposit:
-        return Icons.add_circle_outline;
-      case SavingsTransactionType.withdrawal:
-        return Icons.remove_circle_outline;
-      case SavingsTransactionType.interest:
-        return Icons.trending_up;
-      case SavingsTransactionType.dividend:
-        return Icons.payments;
-      case SavingsTransactionType.appreciation:
-        return Icons.arrow_upward;
-      case SavingsTransactionType.depreciation:
-        return Icons.arrow_downward;
-    }
-  }
-
-  Color _getTransactionColor(SavingsTransactionType type) {
-    switch (type) {
-      case SavingsTransactionType.deposit:
-      case SavingsTransactionType.interest:
-      case SavingsTransactionType.dividend:
-      case SavingsTransactionType.appreciation:
-        return Colors.green;
-      case SavingsTransactionType.withdrawal:
-      case SavingsTransactionType.depreciation:
-        return Colors.red;
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -125,13 +83,17 @@ class SavingsDetailScreen extends ConsumerWidget {
     final returnsPercentage = savings.investedAmountInCents > 0
         ? (returns / savings.investedAmountInCents) * 100
         : 0.0;
+    final categoryStyle = SavingsCategoryStyle.of(savings.category);
+    final returnsColor = returns >= 0
+        ? context.glass.income
+        : context.glass.expense;
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: Text(savings.name),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit),
+            icon: const Icon(Icons.edit_rounded),
             onPressed: () {
               // TODO: Navigate to edit screen
             },
@@ -141,100 +103,95 @@ class SavingsDetailScreen extends ConsumerWidget {
       body: Column(
         children: [
           // Summary Card
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-            ),
-            child: Column(
-              children: [
-                Text(
-                  'Current Value',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                CurrencyText(
-                  amountInCents: savings.currentValueInCents,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    Column(
-                      children: [
-                        Text(
-                          'Invested',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.8),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        CurrencyText(
-                          amountInCents: savings.investedAmountInCents,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Column(
-                      children: [
-                        Text(
-                          'Returns',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.8),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: GlassCard(
+              tint: AppColors.savings,
+              radius: AppTheme.radiusXL,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      GlassIcon(
+                        categoryStyle.icon,
+                        color: categoryStyle.color,
+                        size: 44,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            CurrencyText(
-                              amountInCents: returns,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: returns >= 0 ? Colors.green : Colors.red,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
                             Text(
-                              '(${returnsPercentage.toStringAsFixed(2)}%)',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: returns >= 0 ? Colors.green : Colors.red,
-                              ),
+                              'Current Value',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            Text(
+                              categoryStyle.label,
+                              style: theme.textTheme.titleSmall,
                             ),
                           ],
                         ),
-                      ],
+                      ),
+                      SavingsReturnBadge(
+                        returnsInCents: returns,
+                        percentage: returnsPercentage,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _GradientMask(
+                    gradient: AppColors.savingsGradient,
+                    child: CurrencyText(
+                      amountInCents: savings.currentValueInCents,
+                      style: AppTypography.amount(
+                        36,
+                      ).copyWith(color: Colors.white),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _HeroStat(
+                          label: 'Invested',
+                          child: CurrencyText(
+                            amountInCents: savings.investedAmountInCents,
+                            style: AppTypography.amount(
+                              18,
+                            ).copyWith(color: theme.colorScheme.onSurface),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _HeroStat(
+                          label: 'Returns',
+                          child: CurrencyText(
+                            amountInCents: returns,
+                            style: AppTypography.amount(
+                              18,
+                            ).copyWith(color: returnsColor),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
 
           // Date Range Filter
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Row(
               children: [
                 Text(
-                  'Period:',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Period',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -249,20 +206,22 @@ class SavingsDetailScreen extends ConsumerWidget {
                         final isSelected = selectedFilter == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(filter.label),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              if (selected) {
-                                ref
-                                        .read(
-                                          selectedSavingsDateRangeProvider
-                                              .notifier,
-                                        )
-                                        .state =
-                                    filter;
-                              }
-                            },
+                          child: GlassChips(
+                            child: FilterChip(
+                              label: Text(filter.label),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  ref
+                                          .read(
+                                            selectedSavingsDateRangeProvider
+                                                .notifier,
+                                          )
+                                          .state =
+                                      filter;
+                                }
+                              },
+                            ),
                           ),
                         );
                       }).toList(),
@@ -274,33 +233,20 @@ class SavingsDetailScreen extends ConsumerWidget {
           ),
 
           // Transaction History Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Transaction History',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+          SectionHeader(
+            title: 'Transaction History',
+            actionLabel: 'Add',
+            padding: const EdgeInsets.fromLTRB(24, 16, 16, 8),
+            onAction: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => AddSavingsTransactionScreen(
+                    savingsId: savings.id,
+                    savingsName: savings.name,
                   ),
                 ),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => AddSavingsTransactionScreen(
-                          savingsId: savings.id,
-                          savingsName: savings.name,
-                        ),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add'),
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           // Transaction List
@@ -308,33 +254,11 @@ class SavingsDetailScreen extends ConsumerWidget {
             child: transactionsAsync.when(
               data: (transactions) {
                 if (transactions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 64,
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No transactions yet',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Add your first transaction to get started',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    icon: Icons.receipt_long_rounded,
+                    color: AppColors.savings,
+                    title: 'No transactions yet',
+                    message: 'Add your first transaction to get started',
                   );
                 }
 
@@ -357,33 +281,11 @@ class SavingsDetailScreen extends ConsumerWidget {
 
                 // Check if filtered list is empty
                 if (filteredTransactions.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 64,
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No transactions in this period',
-                          style: theme.textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try selecting a different date range',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    icon: Icons.event_busy_rounded,
+                    color: AppColors.savings,
+                    title: 'No transactions in this period',
+                    message: 'Try selecting a different date range',
                   );
                 }
 
@@ -424,27 +326,34 @@ class SavingsDetailScreen extends ConsumerWidget {
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 96),
                   itemCount: transactionsWithBalance.length,
                   itemBuilder: (context, index) {
                     final item = transactionsWithBalance[index];
                     final transaction =
                         item['transaction'] as SavingsTransactionEntity;
                     final balance = item['balance'] as int;
-                    final color = _getTransactionColor(transaction.type);
+                    final typeStyle = SavingsTransactionTypeStyle.of(
+                      context,
+                      transaction.type,
+                    );
+                    final color = typeStyle.color;
 
                     return Dismissible(
                       key: Key('transaction_${transaction.id}'),
                       direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(right: 24),
+                        margin: const EdgeInsets.only(bottom: 10),
                         decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12),
+                          gradient: AppColors.expenseGradient,
+                          borderRadius: BorderRadius.circular(AppTheme.radiusM),
                         ),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       confirmDismiss: (direction) async {
                         return await showDialog<bool>(
@@ -464,7 +373,7 @@ class SavingsDetailScreen extends ConsumerWidget {
                                 onPressed: () =>
                                     Navigator.of(context).pop(true),
                                 style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red,
+                                  foregroundColor: context.glass.expense,
                                 ),
                                 child: const Text('Delete'),
                               ),
@@ -491,141 +400,123 @@ class SavingsDetailScreen extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Error deleting transaction: $e'),
-                              backgroundColor: Colors.red,
+                              backgroundColor: AppColors.expenseDeep,
                             ),
                           );
                         }
                       },
-                      child: Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: color.withValues(alpha: 0.1),
-                            child: Icon(
-                              _getTransactionTypeIcon(transaction.type),
-                              color: color,
-                              size: 20,
-                            ),
-                          ),
-                          title: Text(
-                            _getTransactionTypeLabel(transaction.type),
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                DateFormat(
-                                  'MMM dd, yyyy',
-                                ).format(transaction.transactionDate),
-                              ),
-                              if (transaction.notes != null &&
-                                  transaction.notes!.isNotEmpty)
-                                Text(
-                                  transaction.notes!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.6),
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              // Show linkage indicator for deposits linked to expenses
-                              if (transaction.linkedTransactionId != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 4),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.link,
-                                        size: 12,
-                                        color: theme.colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Linked to Expense',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: theme.colorScheme.primary,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Balance: ',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurface.withValues(
-                                    alpha: 0.6,
-                                  ),
-                                ),
-                              ),
-                              CurrencyText(
-                                amountInCents: balance,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          trailing: CurrencyText(
-                            amountInCents: transaction.amountInCents,
-                            prefix:
-                                (transaction.type ==
-                                        SavingsTransactionType.deposit ||
-                                    transaction.type ==
-                                        SavingsTransactionType.interest ||
-                                    transaction.type ==
-                                        SavingsTransactionType.dividend ||
-                                    transaction.type ==
-                                        SavingsTransactionType.appreciation)
-                                ? '+'
-                                : '-',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
-                          ),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    AddSavingsTransactionScreen(
-                                      savingsId: savings.id,
-                                      savingsName: savings.name,
-                                      transaction: transaction,
-                                    ),
-                              ),
-                            );
-                          },
+                      child: GlassTile(
+                        leading: GlassIcon(
+                          typeStyle.icon,
+                          color: color,
+                          size: 42,
                         ),
+                        title: Text(typeStyle.label),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              DateFormat(
+                                'MMM dd, yyyy',
+                              ).format(transaction.transactionDate),
+                            ),
+                            if (transaction.notes != null &&
+                                transaction.notes!.isNotEmpty)
+                              Text(
+                                transaction.notes!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            // Show linkage indicator for deposits linked to expenses
+                            if (transaction.linkedTransactionId != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.link_rounded,
+                                      size: 14,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Linked to Expense',
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text(
+                                  'Balance: ',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                Flexible(
+                                  child: CurrencyText(
+                                    amountInCents: balance,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        trailing: CurrencyText(
+                          amountInCents: transaction.amountInCents,
+                          prefix:
+                              (transaction.type ==
+                                      SavingsTransactionType.deposit ||
+                                  transaction.type ==
+                                      SavingsTransactionType.interest ||
+                                  transaction.type ==
+                                      SavingsTransactionType.dividend ||
+                                  transaction.type ==
+                                      SavingsTransactionType.appreciation)
+                              ? '+'
+                              : '-',
+                          style: AppTypography.amount(
+                            16,
+                          ).copyWith(color: color),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => AddSavingsTransactionScreen(
+                                savingsId: savings.id,
+                                savingsName: savings.name,
+                                transaction: transaction,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error loading transactions: $error'),
-                  ],
-                ),
-              ),
+              loading: () => const Center(child: LoadingIndicator()),
+              error: (error, stack) =>
+                  ErrorView(message: 'Error loading transactions: $error'),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GradientFab(
+        tooltip: 'Add Transaction',
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -636,8 +527,59 @@ class SavingsDetailScreen extends ConsumerWidget {
             ),
           );
         },
-        child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+/// Small labelled figure inside the hero card.
+class _HeroStat extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _HeroStat({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppTheme.radiusS),
+        border: Border.all(color: context.glass.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Paints its child (e.g. a [CurrencyText]) with a gradient.
+class _GradientMask extends StatelessWidget {
+  final Gradient gradient;
+  final Widget child;
+
+  const _GradientMask({required this.gradient, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      blendMode: BlendMode.srcIn,
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      child: child,
     );
   }
 }

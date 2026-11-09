@@ -7,7 +7,7 @@ import '../../../../core/database/tables/accounts_table.dart';
 import '../../../../core/database/tables/recurring_transactions_table.dart';
 import '../../../../core/database/tables/transactions_table.dart';
 import '../../../../core/providers/settings_provider.dart';
-import '../../../../core/widgets/styled_button.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../../../core/widgets/styled_form_field.dart';
 import '../providers/recurring_transaction_provider.dart';
 
@@ -56,36 +56,38 @@ class _AddRecurringTransactionScreenState
         : ref.watch(expenseCategoriesProvider);
     final accounts = ref.watch(userAccountsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Add Recurring Transaction'),
-        elevation: 0,
-      ),
+    final glass = context.glass;
+    final isIncome = _transactionType == TransactionType.income;
+
+    return GlassScaffold(
+      appBar: AppBar(title: const Text('Add Recurring Transaction')),
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           children: [
             // Transaction Type Selector
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Transaction Type', style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 12),
-                    SegmentedButton<TransactionType>(
+            GlassCard(
+              padding: const EdgeInsets.all(16),
+              tint: isIncome ? glass.income : glass.expense,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Transaction Type', style: theme.textTheme.titleSmall),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<TransactionType>(
                       segments: const [
                         ButtonSegment(
                           value: TransactionType.expense,
                           label: Text('Expense'),
-                          icon: Icon(Icons.remove_circle_outline),
+                          icon: Icon(Icons.remove_circle_outline_rounded),
                         ),
                         ButtonSegment(
                           value: TransactionType.income,
                           label: Text('Income'),
-                          icon: Icon(Icons.add_circle_outline),
+                          icon: Icon(Icons.add_circle_outline_rounded),
                         ),
                       ],
                       selected: {_transactionType},
@@ -97,8 +99,8 @@ class _AddRecurringTransactionScreenState
                         });
                       },
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),
@@ -108,7 +110,7 @@ class _AddRecurringTransactionScreenState
               controller: _amountController,
               labelText: 'Amount',
               prefixText: '${ref.watch(currentCurrencyProvider).symbol} ',
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: const Icon(Icons.payments_rounded),
               hintText: '0.00',
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -127,42 +129,52 @@ class _AddRecurringTransactionScreenState
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Category field
             categories.when(
               data: (categoryList) => StyledSelectorField(
                 labelText: 'Category',
                 displayText: _selectedCategory?.name ?? 'Select category',
-                icon: Icons.category,
+                icon: Icons.category_rounded,
                 hasValue: _selectedCategory != null,
                 onTap: () => _showCategoryPicker(context, categoryList),
               ),
-              loading: () => const CircularProgressIndicator(),
-              error: (error, stack) => Text('Error loading categories: $error'),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Text(
+                'Error loading categories: $error',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Account field
             accounts.when(
               data: (accountList) => StyledSelectorField(
                 labelText: 'Account',
                 displayText: _selectedAccount?.name ?? 'Select account',
-                icon: Icons.account_balance_wallet,
+                icon: Icons.account_balance_wallet_rounded,
                 hasValue: _selectedAccount != null,
                 onTap: () => _showAccountPicker(context, accountList),
               ),
-              loading: () => const CircularProgressIndicator(),
-              error: (error, stack) => Text('Error loading accounts: $error'),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Text(
+                'Error loading accounts: $error',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Frequency field
             DropdownButtonFormField<RecurrenceFrequency>(
               initialValue: _frequency,
               decoration: const InputDecoration(
                 labelText: 'Frequency',
-                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.repeat_rounded),
                 helperText: 'How often should this repeat?',
               ),
               items: RecurrenceFrequency.values.map((frequency) {
@@ -179,58 +191,37 @@ class _AddRecurringTransactionScreenState
                 }
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Start Date field
             StyledSelectorField(
               labelText: 'Start Date',
               displayText: DateFormat('MMM dd, yyyy').format(_startDate),
-              icon: Icons.calendar_today,
+              icon: Icons.calendar_today_rounded,
               onTap: () => _selectStartDate(context),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // End Date field (optional)
             InkWell(
               onTap: () => _selectEndDate(context),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
               child: InputDecorator(
                 decoration: InputDecoration(
                   labelText: 'End Date (Optional)',
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.3),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(color: theme.colorScheme.outline),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 2,
-                    ),
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 16,
-                  ),
                   suffixIcon: _endDate != null
                       ? IconButton(
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(Icons.clear_rounded),
                           onPressed: () {
                             setState(() {
                               _endDate = null;
                             });
                           },
                         )
-                      : const Icon(Icons.calendar_today),
+                      : Icon(
+                          Icons.event_busy_rounded,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                 ),
                 child: Text(
                   _endDate != null
@@ -238,19 +229,19 @@ class _AddRecurringTransactionScreenState
                       : 'No end date',
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: _endDate == null
-                        ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
-                        : null,
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.onSurface,
                   ),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Description field
             StyledTextFormField(
               controller: _descriptionController,
               labelText: 'Description',
-              prefixIcon: const Icon(Icons.description),
+              prefixIcon: const Icon(Icons.description_rounded),
               hintText: 'e.g., Monthly rent, Netflix subscription',
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -259,129 +250,159 @@ class _AddRecurringTransactionScreenState
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
 
             // Payee field (optional)
             StyledTextFormField(
               controller: _payeeController,
               labelText: 'Payee (Optional)',
-              prefixIcon: const Icon(Icons.person_outline),
+              prefixIcon: const Icon(Icons.person_outline_rounded),
               hintText: 'Who receives/sends this payment?',
             ),
             const SizedBox(height: 20),
 
-            // Auto-create switch
-            SwitchListTile(
-              title: const Text('Auto-create transactions'),
-              subtitle: const Text(
-                'Automatically create transactions when due',
-              ),
-              value: _autoCreate,
-              onChanged: (value) {
-                setState(() {
-                  _autoCreate = value;
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // Days before to create (only if auto-create is enabled)
-            if (_autoCreate)
-              DropdownButtonFormField<int>(
-                initialValue: _daysBeforeToCreate,
-                decoration: const InputDecoration(
-                  labelText: 'Create transaction',
-                  border: OutlineInputBorder(),
-                  helperText: 'How many days before the due date?',
-                ),
-                items: [
-                  const DropdownMenuItem(
-                    value: 0,
-                    child: Text('On the due date'),
+            // Auto-create settings
+            GlassCard(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                children: [
+                  _GlassSwitchRow(
+                    icon: Icons.auto_awesome_rounded,
+                    color: theme.colorScheme.primary,
+                    title: 'Auto-create transactions',
+                    subtitle: 'Automatically create transactions when due',
+                    value: _autoCreate,
+                    onChanged: (value) {
+                      setState(() {
+                        _autoCreate = value;
+                      });
+                    },
                   ),
-                  const DropdownMenuItem(value: 1, child: Text('1 day before')),
-                  const DropdownMenuItem(
-                    value: 2,
-                    child: Text('2 days before'),
-                  ),
-                  const DropdownMenuItem(
-                    value: 3,
-                    child: Text('3 days before'),
-                  ),
-                  const DropdownMenuItem(
-                    value: 7,
-                    child: Text('1 week before'),
-                  ),
+                  // Days before to create (only if auto-create is enabled)
+                  if (_autoCreate) ...[
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      initialValue: _daysBeforeToCreate,
+                      decoration: const InputDecoration(
+                        labelText: 'Create transaction',
+                        helperText: 'How many days before the due date?',
+                      ),
+                      items: [
+                        const DropdownMenuItem(
+                          value: 0,
+                          child: Text('On the due date'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 1,
+                          child: Text('1 day before'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 2,
+                          child: Text('2 days before'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 3,
+                          child: Text('3 days before'),
+                        ),
+                        const DropdownMenuItem(
+                          value: 7,
+                          child: Text('1 week before'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _daysBeforeToCreate = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _daysBeforeToCreate = value;
-                    });
-                  }
-                },
               ),
-            if (_autoCreate) const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 16),
 
             // Notification settings
-            SwitchListTile(
-              title: const Text('Enable Notifications'),
-              subtitle: const Text(
-                'Get notified before the transaction is due',
-              ),
-              value: _enableNotifications,
-              onChanged: (value) {
-                setState(() {
-                  _enableNotifications = value;
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-
-            // Notification timing (only if notifications are enabled)
-            if (_enableNotifications)
-              DropdownButtonFormField<int>(
-                initialValue: _notificationMinutesBefore,
-                decoration: const InputDecoration(
-                  labelText: 'Notify me',
-                  border: OutlineInputBorder(),
-                  helperText: 'When to show the notification?',
-                ),
-                items: const [
-                  DropdownMenuItem(value: 0, child: Text('On the due date')),
-                  DropdownMenuItem(value: 1440, child: Text('1 day before')),
-                  DropdownMenuItem(value: 2880, child: Text('2 days before')),
-                  DropdownMenuItem(value: 4320, child: Text('3 days before')),
-                  DropdownMenuItem(value: 10080, child: Text('1 week before')),
+            GlassCard(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(
+                children: [
+                  _GlassSwitchRow(
+                    icon: Icons.notifications_active_rounded,
+                    color: AppColors.warning,
+                    title: 'Enable Notifications',
+                    subtitle: 'Get notified before the transaction is due',
+                    value: _enableNotifications,
+                    onChanged: (value) {
+                      setState(() {
+                        _enableNotifications = value;
+                      });
+                    },
+                  ),
+                  // Notification timing (only if notifications are enabled)
+                  if (_enableNotifications) ...[
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<int>(
+                      initialValue: _notificationMinutesBefore,
+                      decoration: const InputDecoration(
+                        labelText: 'Notify me',
+                        helperText: 'When to show the notification?',
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 0,
+                          child: Text('On the due date'),
+                        ),
+                        DropdownMenuItem(
+                          value: 1440,
+                          child: Text('1 day before'),
+                        ),
+                        DropdownMenuItem(
+                          value: 2880,
+                          child: Text('2 days before'),
+                        ),
+                        DropdownMenuItem(
+                          value: 4320,
+                          child: Text('3 days before'),
+                        ),
+                        DropdownMenuItem(
+                          value: 10080,
+                          child: Text('1 week before'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            _notificationMinutesBefore = value;
+                          });
+                        }
+                      },
+                    ),
+                  ],
                 ],
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _notificationMinutesBefore = value;
-                    });
-                  }
-                },
               ),
-            if (_enableNotifications) const SizedBox(height: 20),
+            ),
+            const SizedBox(height: 20),
 
             // Notes field (optional)
             StyledTextFormField(
               controller: _notesController,
               labelText: 'Notes (Optional)',
-              prefixIcon: const Icon(Icons.note),
+              prefixIcon: const Icon(Icons.notes_rounded),
               hintText: 'Additional information',
               maxLines: 3,
             ),
             const SizedBox(height: 32),
 
             // Save button
-            StyledElevatedButton(
+            GradientButton(
               onPressed: _saveRecurringTransaction,
-              text: 'Save Recurring Transaction',
-              icon: Icons.check,
-              backgroundColor: _transactionType == TransactionType.income
-                  ? Colors.green
-                  : Colors.red,
+              label: 'Save Recurring Transaction',
+              icon: Icons.check_rounded,
+              gradient: isIncome
+                  ? AppColors.incomeGradient
+                  : AppColors.expenseGradient,
             ),
             const SizedBox(height: 16),
           ],
@@ -542,6 +563,37 @@ class _AddRecurringTransactionScreenState
   }
 }
 
+/// Switch row on glass: glass icon, title/subtitle and a themed switch.
+class _GlassSwitchRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  const _GlassSwitchRow({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: GlassIcon(icon, color: color, size: 40),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      onChanged: onChanged,
+    );
+  }
+}
+
 /// Category picker modal bottom sheet
 class _CategoryPicker extends StatelessWidget {
   final List<CategoryEntity> categories;
@@ -563,37 +615,33 @@ class _CategoryPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text('Select Category', style: theme.textTheme.titleLarge),
           ),
-          const Divider(height: 1),
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               itemCount: categories.length,
               itemBuilder: (context, index) {
                 final category = categories[index];
                 final isSelected = selectedCategory?.id == category.id;
+                final color = CategoryVisuals.vivid(category.color);
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: category.color != null
-                        ? Color(
-                            int.parse(
-                              category.color!.replaceFirst('#', '0xFF'),
-                            ),
-                          )
-                        : theme.colorScheme.primary.withValues(alpha: 0.2),
-                    child: Icon(
-                      Icons.category,
-                      color: category.color != null
-                          ? Colors.white
-                          : theme.colorScheme.primary,
-                    ),
+                return GlassTile(
+                  tint: isSelected ? color : null,
+                  leading: GlassIcon(
+                    CategoryVisuals.icon(category.icon),
+                    color: color,
+                    size: 40,
                   ),
                   title: Text(category.name),
-                  trailing: isSelected ? const Icon(Icons.check) : null,
-                  selected: isSelected,
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check_circle_rounded,
+                          color: theme.colorScheme.primary,
+                        )
+                      : null,
                   onTap: () => onCategorySelected(category),
                 );
               },
@@ -626,26 +674,37 @@ class _AccountPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
             child: Text('Select Account', style: theme.textTheme.titleLarge),
           ),
-          const Divider(height: 1),
           Flexible(
             child: ListView.builder(
               shrinkWrap: true,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               itemCount: accounts.length,
               itemBuilder: (context, index) {
                 final account = accounts[index];
                 final isSelected = selectedAccount?.id == account.id;
+                final color = CategoryVisuals.vivid(
+                  account.color,
+                  fallback: theme.colorScheme.primary,
+                );
 
-                return ListTile(
-                  leading: CircleAvatar(
-                    child: Icon(_getAccountIcon(account.type)),
+                return GlassTile(
+                  tint: isSelected ? color : null,
+                  leading: GlassIcon(
+                    _getAccountIcon(account.type),
+                    color: color,
+                    size: 40,
                   ),
                   title: Text(account.name),
                   subtitle: Text(account.type.name.toUpperCase()),
-                  trailing: isSelected ? const Icon(Icons.check) : null,
-                  selected: isSelected,
+                  trailing: isSelected
+                      ? Icon(
+                          Icons.check_circle_rounded,
+                          color: theme.colorScheme.primary,
+                        )
+                      : null,
                   onTap: () => onAccountSelected(account),
                 );
               },
@@ -659,17 +718,17 @@ class _AccountPicker extends StatelessWidget {
   IconData _getAccountIcon(AccountType type) {
     switch (type) {
       case AccountType.cash:
-        return Icons.money;
+        return Icons.payments_rounded;
       case AccountType.bank:
-        return Icons.account_balance;
+        return Icons.account_balance_rounded;
       case AccountType.creditCard:
-        return Icons.credit_card;
+        return Icons.credit_card_rounded;
       case AccountType.investment:
-        return Icons.trending_up;
+        return Icons.trending_up_rounded;
       case AccountType.loan:
-        return Icons.account_balance_wallet;
+        return Icons.account_balance_wallet_rounded;
       case AccountType.other:
-        return Icons.account_balance_wallet;
+        return Icons.account_balance_wallet_rounded;
     }
   }
 }

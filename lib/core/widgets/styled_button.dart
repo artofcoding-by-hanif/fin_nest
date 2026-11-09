@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 
-/// Styled elevated button with rounded corners
+import '../theme/app_theme.dart';
+import 'glass/gradient_widgets.dart';
+
+/// Primary full-width button, rendered as a glowing [GradientButton].
+///
+/// `backgroundColor` (if given) turns into a gradient based on that color,
+/// so existing call sites like "save expense in red" keep their meaning.
 class StyledElevatedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String text;
@@ -21,61 +27,19 @@ class StyledElevatedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? theme.colorScheme.primary,
-          foregroundColor: foregroundColor ?? theme.colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 2,
-          shadowColor: theme.colorScheme.shadow.withValues(alpha: 0.3),
-        ),
-        child: isLoading
-            ? SizedBox(
-                height: 24,
-                width: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    foregroundColor ?? theme.colorScheme.onPrimary,
-                  ),
-                ),
-              )
-            : icon != null
-                ? Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icon, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        text,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  )
-                : Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-      ),
+    return GradientButton(
+      label: text,
+      icon: icon,
+      onPressed: onPressed,
+      isLoading: isLoading,
+      gradient: backgroundColor == null
+          ? AppColors.accentGradient
+          : AppColors.tintGradient(backgroundColor!),
     );
   }
 }
 
-/// Styled outlined button with rounded corners
+/// Secondary full-width button on glass.
 class StyledOutlinedButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final String text;
@@ -94,47 +58,24 @@ class StyledOutlinedButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final style = OutlinedButton.styleFrom(
+      minimumSize: const Size.fromHeight(56),
+      foregroundColor: foregroundColor,
+      side: borderColor == null
+          ? null
+          : BorderSide(color: borderColor!, width: 1.2),
+    );
 
     return SizedBox(
       width: double.infinity,
-      height: 56,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: foregroundColor ?? theme.colorScheme.primary,
-          side: BorderSide(
-            color: borderColor ?? theme.colorScheme.outline,
-            width: 1.5,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: icon != null
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    text,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
+      child: icon == null
+          ? OutlinedButton(onPressed: onPressed, style: style, child: Text(text))
+          : OutlinedButton.icon(
+              onPressed: onPressed,
+              style: style,
+              icon: Icon(icon, size: 20),
+              label: Text(text),
+            ),
     );
   }
 }
-

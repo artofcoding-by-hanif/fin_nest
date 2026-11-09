@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/app_lock_provider.dart';
+import 'glass/glass.dart';
+import 'loading_indicator.dart';
 
 /// Screen shown when app is locked
 /// Displays biometric authentication prompt
@@ -35,102 +37,65 @@ class _AppLockScreenState extends ConsumerState<AppLockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isAuthenticating = ref.watch(isAuthenticatingProvider);
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+    return GlassScaffold(
+      animateBackground: true,
       body: SafeArea(
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // App Logo/Icon
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.account_balance_wallet,
-                  size: 60,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // App Name
-              Text(
-                'FinNest',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              const SizedBox(height: 8),
-
-              // Lock Message
-              Text(
-                'App Locked',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 48),
-
-              // Biometric Icon
-              Icon(
-                Icons.fingerprint,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-
-              // Authentication Status
-              if (isAuthenticating)
-                Column(
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Authenticating...',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                    ),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    Text(
-                      'Authenticate to continue',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          _hasAttemptedAuth = false;
-                        });
-                        _authenticate();
-                      },
-                      icon: const Icon(Icons.fingerprint),
-                      label: const Text('Authenticate'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const FinNestLogo(size: 72),
+                const SizedBox(height: 16),
+                Text('FinNest', style: theme.textTheme.headlineSmall),
+                const SizedBox(height: 40),
+                GlassCard(
+                  radius: AppTheme.radiusXL,
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+                  child: Column(
+                    children: [
+                      const GlassIcon(
+                        Icons.fingerprint_rounded,
+                        color: AppColors.cyan,
+                        size: 92,
+                      ),
+                      const SizedBox(height: 24),
+                      Text('App Locked', style: theme.textTheme.titleLarge),
+                      const SizedBox(height: 6),
+                      Text(
+                        isAuthenticating
+                            ? 'Authenticating...'
+                            : 'Authenticate to continue',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 28),
+                      if (isAuthenticating)
+                        const LoadingIndicator(size: 34)
+                      else
+                        GradientButton(
+                          label: 'Unlock',
+                          icon: Icons.lock_open_rounded,
+                          onPressed: () {
+                            setState(() {
+                              _hasAttemptedAuth = false;
+                            });
+                            _authenticate();
+                          },
+                        ),
+                    ],
+                  ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-

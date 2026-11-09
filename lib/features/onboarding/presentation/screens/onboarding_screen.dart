@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../domain/models/onboarding_page.dart';
 
 /// Onboarding screen with multiple slides
@@ -53,29 +54,29 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isLastPage = _currentPage == OnboardingPages.pages.length - 1;
+    final pages = OnboardingPages.pages;
+    final isLastPage = _currentPage == pages.length - 1;
+    final pageColor = pages[_currentPage].color ?? AppColors.violet;
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+    return GlassScaffold(
+      animateBackground: true,
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // Brand + Skip
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: _skipOnboarding,
-                  child: Text(
-                    'Skip',
-                    style: TextStyle(
-                      color: theme.colorScheme.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+              padding: const EdgeInsets.fromLTRB(24, 12, 12, 0),
+              child: Row(
+                children: [
+                  const FinNestLogo(size: 30),
+                  const SizedBox(width: 10),
+                  Text('FinNest', style: theme.textTheme.titleMedium),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: _skipOnboarding,
+                    child: const Text('Skip'),
                   ),
-                ),
+                ],
               ),
             ),
 
@@ -84,25 +85,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
-                itemCount: OnboardingPages.pages.length,
+                itemCount: pages.length,
                 itemBuilder: (context, index) {
-                  return _OnboardingPageWidget(
-                    page: OnboardingPages.pages[index],
-                  );
+                  return _OnboardingPageWidget(page: pages[index]);
                 },
               ),
             ),
 
             // Page indicators
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(
-                  OnboardingPages.pages.length,
+                  pages.length,
                   (index) => _PageIndicator(
                     isActive: index == _currentPage,
-                    color: OnboardingPages.pages[index].color,
+                    color: pages[index].color,
                   ),
                 ),
               ),
@@ -110,27 +109,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
             // Next/Get Started button
             Padding(
-              padding: const EdgeInsets.all(24),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.colorScheme.primary,
-                    foregroundColor: theme.colorScheme.onPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    isLastPage ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+              child: GradientButton(
+                label: isLastPage ? 'Get Started' : 'Next',
+                icon: isLastPage
+                    ? Icons.rocket_launch_rounded
+                    : Icons.arrow_forward_rounded,
+                gradient: isLastPage
+                    ? AppColors.primaryGradient
+                    : AppColors.tintGradient(pageColor),
+                onPressed: _nextPage,
               ),
             ),
           ],
@@ -151,54 +139,71 @@ class _OnboardingPageWidget extends StatelessWidget {
     final theme = Theme.of(context);
     final color = page.color ?? theme.colorScheme.primary;
 
-    return Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Icon
-          Container(
-            width: 150,
-            height: 150,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              page.icon,
-              size: 80,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 48),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Scale the hero icon down on short screens.
+        final iconSize = (constraints.maxHeight * 0.32).clamp(96.0, 148.0);
+        return SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Halo + glass icon
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: iconSize * 1.9,
+                      height: iconSize * 1.9,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            color.withValues(alpha: 0.35),
+                            color.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                    GlassIcon(page.icon, color: color, size: iconSize),
+                  ],
+                ),
+                const SizedBox(height: 8),
 
-          // Title
-          Text(
-            page.title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.colorScheme.onSurface,
+                // Text on a glass card
+                GlassCard(
+                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+                  radius: AppTheme.radiusXL,
+                  child: Column(
+                    children: [
+                      Text(
+                        page.title,
+                        style: theme.textTheme.headlineSmall,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        page.description,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
-
-          // Description
-          Text(
-            page.description,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              height: 1.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-/// Page indicator dot
+/// Page indicator pill
 class _PageIndicator extends StatelessWidget {
   final bool isActive;
   final Color? color;
@@ -210,19 +215,27 @@ class _PageIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final indicatorColor = color ?? theme.colorScheme.primary;
+    final indicatorColor = color ?? Theme.of(context).colorScheme.primary;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: isActive ? 24 : 8,
+      width: isActive ? 28 : 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive ? indicatorColor : indicatorColor.withOpacity(0.3),
+        gradient: isActive ? AppColors.tintGradient(indicatorColor) : null,
+        color: isActive ? null : indicatorColor.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
+        boxShadow: isActive
+            ? [
+                BoxShadow(
+                  color: indicatorColor.withValues(alpha: 0.6),
+                  blurRadius: 10,
+                ),
+              ]
+            : null,
       ),
     );
   }
 }
-

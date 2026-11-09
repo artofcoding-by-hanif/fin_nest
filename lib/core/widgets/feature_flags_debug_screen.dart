@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/feature_flags.dart';
 import '../config/feature_flag_provider.dart';
+import 'glass/glass.dart';
 
 /// Debug screen to view and toggle feature flags
 /// Only available in debug mode
@@ -13,12 +14,14 @@ class FeatureFlagsDebugScreen extends ConsumerWidget {
     final flags = ref.watch(featureFlagNotifierProvider);
     final notifier = ref.read(featureFlagNotifierProvider.notifier);
 
-    return Scaffold(
+    final theme = Theme.of(context);
+
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Feature Flags'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
               notifier.clearAllOverrides();
               ScaffoldMessenger.of(context).showSnackBar(
@@ -30,23 +33,44 @@ class FeatureFlagsDebugScreen extends ConsumerWidget {
         ],
       ),
       body: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         itemCount: FeatureFlag.values.length,
         itemBuilder: (context, index) {
           final flag = FeatureFlag.values[index];
           final isEnabled = flags[flag.key] ?? false;
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          return GlassCard(
+            blur: false,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.zero,
+            radius: AppTheme.radiusM,
             child: ExpansionTile(
-              leading: Icon(
-                isEnabled ? Icons.check_circle : Icons.cancel,
-                color: isEnabled ? Colors.green : Colors.grey,
+              shape: const Border(),
+              collapsedShape: const Border(),
+              tilePadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 4,
+              ),
+              leading: GlassIcon(
+                isEnabled ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                color: isEnabled
+                    ? context.glass.income
+                    : theme.colorScheme.onSurfaceVariant,
+                size: 36,
+                glow: isEnabled,
               ),
               title: Text(
                 flag.displayName,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-              subtitle: Text(flag.key),
+              subtitle: Text(
+                flag.key,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
               trailing: Switch(
                 value: isEnabled,
                 onChanged: (value) {
@@ -54,21 +78,24 @@ class FeatureFlagsDebugScreen extends ConsumerWidget {
                 },
               ),
               children: [
+                const Divider(),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         flag.description,
-                        style: Theme.of(context).textTheme.bodyMedium,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           TextButton.icon(
-                            icon: const Icon(Icons.clear),
+                            icon: const Icon(Icons.clear_rounded),
                             label: const Text('Clear Override'),
                             onPressed: () {
                               notifier.clearLocalOverride(flag);

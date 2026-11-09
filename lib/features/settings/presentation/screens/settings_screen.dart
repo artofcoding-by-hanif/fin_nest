@@ -5,6 +5,7 @@ import '../../../../core/models/currency_config.dart';
 import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/services/biometric_auth_service.dart';
 import '../../../../core/settings/app_settings.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../../data_export/presentation/providers/export_provider.dart';
 
 /// Settings screen for app preferences
@@ -21,12 +22,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Settings'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: Icon(Icons.restart_alt_rounded, color: context.glass.expense),
             onPressed: () async {
               await settingsNotifier.resetToDefaults();
               if (context.mounted) {
@@ -40,49 +41,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
           // Theme Section
-          _buildSectionHeader('Appearance'),
-          _buildThemeTile(context, settings, settingsNotifier),
-          const Divider(),
+          _SettingsGroup(
+            title: 'Appearance',
+            children: [_buildThemeTile(context, settings, settingsNotifier)],
+          ),
 
           // Units Section
-          _buildSectionHeader('Units & Formats'),
-          _buildCurrencyFormatTile(context, settings, settingsNotifier),
-          _buildDateFormatTile(context, settings, settingsNotifier),
-          _buildNumberFormatTile(context, settings, settingsNotifier),
-          _buildDefaultCurrencyTile(context, settings, settingsNotifier),
-          const Divider(),
+          _SettingsGroup(
+            title: 'Units & Formats',
+            children: [
+              _buildCurrencyFormatTile(context, settings, settingsNotifier),
+              _buildDateFormatTile(context, settings, settingsNotifier),
+              _buildNumberFormatTile(context, settings, settingsNotifier),
+              _buildDefaultCurrencyTile(context, settings, settingsNotifier),
+            ],
+          ),
 
           // Security Section
-          _buildSectionHeader('Security'),
-          _buildBiometricTile(settings, settingsNotifier),
-          const Divider(),
+          _SettingsGroup(
+            title: 'Security',
+            children: [_buildBiometricTile(settings, settingsNotifier)],
+          ),
 
           // Notifications Section
-          _buildSectionHeader('Notifications'),
-          _buildNotificationsTile(settings, settingsNotifier),
-          const Divider(),
+          _SettingsGroup(
+            title: 'Notifications',
+            children: [_buildNotificationsTile(settings, settingsNotifier)],
+          ),
 
           // Data Management Section
-          _buildSectionHeader('Data Management'),
-          _buildExportDataTile(context, ref),
-          _buildImportDataTile(context, ref),
+          _SettingsGroup(
+            title: 'Data Management',
+            children: [
+              _buildExportDataTile(context, ref),
+              _buildImportDataTile(context, ref),
+            ],
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.deepPurple,
-        ),
       ),
     );
   }
@@ -92,11 +90,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     AppSettings settings,
     SettingsNotifier notifier,
   ) {
-    return ListTile(
-      leading: Icon(settings.themeMode.icon),
-      title: const Text('Theme'),
-      subtitle: Text(settings.themeMode.displayName),
-      trailing: const Icon(Icons.chevron_right),
+    return _SettingsRow(
+      icon: _themeIcon(settings.themeMode),
+      color: AppColors.violet,
+      title: 'Theme',
+      subtitle: settings.themeMode.displayName,
+      trailing: const _Chevron(),
       onTap: () => _showThemeDialog(context, settings, notifier),
     );
   }
@@ -106,11 +105,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     AppSettings settings,
     SettingsNotifier notifier,
   ) {
-    return ListTile(
-      leading: const Icon(Icons.attach_money),
-      title: const Text('Currency Format'),
-      subtitle: Text(settings.currencyFormat.displayName),
-      trailing: const Icon(Icons.chevron_right),
+    return _SettingsRow(
+      icon: Icons.attach_money_rounded,
+      color: AppColors.income,
+      title: 'Currency Format',
+      subtitle: settings.currencyFormat.displayName,
+      trailing: const _Chevron(),
       onTap: () => _showCurrencyFormatDialog(context, settings, notifier),
     );
   }
@@ -120,11 +120,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     AppSettings settings,
     SettingsNotifier notifier,
   ) {
-    return ListTile(
-      leading: const Icon(Icons.calendar_today),
-      title: const Text('Date Format'),
-      subtitle: Text(settings.dateFormat.displayName),
-      trailing: const Icon(Icons.chevron_right),
+    return _SettingsRow(
+      icon: Icons.calendar_today_rounded,
+      color: AppColors.cyan,
+      title: 'Date Format',
+      subtitle: settings.dateFormat.displayName,
+      trailing: const _Chevron(),
       onTap: () => _showDateFormatDialog(context, settings, notifier),
     );
   }
@@ -134,11 +135,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     AppSettings settings,
     SettingsNotifier notifier,
   ) {
-    return ListTile(
-      leading: const Icon(Icons.numbers),
-      title: const Text('Number Format'),
-      subtitle: Text(settings.numberFormat.displayName),
-      trailing: const Icon(Icons.chevron_right),
+    return _SettingsRow(
+      icon: Icons.numbers_rounded,
+      color: AppColors.indigo,
+      title: 'Number Format',
+      subtitle: settings.numberFormat.displayName,
+      trailing: const _Chevron(),
       onTap: () => _showNumberFormatDialog(context, settings, notifier),
     );
   }
@@ -151,24 +153,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final currency = SupportedCurrencies.getByCodeOrDefault(
       settings.defaultCurrency,
     );
-    return ListTile(
-      leading: const Icon(Icons.monetization_on),
-      title: const Text('Default Currency'),
-      subtitle: Text(
-        '${currency.flag ?? ''} ${currency.name} (${currency.code})',
-      ),
-      trailing: const Icon(Icons.chevron_right),
+    return _SettingsRow(
+      icon: Icons.monetization_on_rounded,
+      color: AppColors.warning,
+      title: 'Default Currency',
+      subtitle: '${currency.flag ?? ''} ${currency.name} (${currency.code})',
+      trailing: const _Chevron(),
       onTap: () => _showDefaultCurrencyDialog(context, settings, notifier),
     );
   }
 
   Widget _buildBiometricTile(AppSettings settings, SettingsNotifier notifier) {
-    return SwitchListTile(
-      secondary: const Icon(Icons.fingerprint),
-      title: const Text('Biometric Authentication'),
-      subtitle: const Text('Use fingerprint or face ID'),
-      value: settings.biometricEnabled,
-      onChanged: (value) => _handleBiometricToggle(value, notifier),
+    return _SettingsRow(
+      icon: Icons.fingerprint_rounded,
+      color: AppColors.pink,
+      title: 'Biometric Authentication',
+      subtitle: 'Use fingerprint or face ID',
+      trailing: Switch(
+        value: settings.biometricEnabled,
+        onChanged: (value) => _handleBiometricToggle(value, notifier),
+      ),
+      onTap: () =>
+          _handleBiometricToggle(!settings.biometricEnabled, notifier),
     );
   }
 
@@ -176,12 +182,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     AppSettings settings,
     SettingsNotifier notifier,
   ) {
-    return SwitchListTile(
-      secondary: const Icon(Icons.notifications),
-      title: const Text('Notifications'),
-      subtitle: const Text('Enable push notifications'),
-      value: settings.notificationsEnabled,
-      onChanged: (value) => notifier.setNotificationsEnabled(value),
+    return _SettingsRow(
+      icon: Icons.notifications_rounded,
+      color: AppColors.blue,
+      title: 'Notifications',
+      subtitle: 'Enable push notifications',
+      trailing: Switch(
+        value: settings.notificationsEnabled,
+        onChanged: (value) => notifier.setNotificationsEnabled(value),
+      ),
+      onTap: () =>
+          notifier.setNotificationsEnabled(!settings.notificationsEnabled),
     );
   }
 
@@ -201,7 +212,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             return RadioListTile<AppThemeMode>(
               title: Row(
                 children: [
-                  Icon(mode.icon, size: 20),
+                  Icon(_themeIcon(mode), size: 20),
                   const SizedBox(width: 12),
                   Text(mode.displayName),
                 ],
@@ -330,13 +341,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return ListTile(
                 leading: Text(
                   currency.flag ?? currency.symbol,
-                  style: const TextStyle(fontSize: 24),
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 title: Text(currency.name),
                 subtitle: Text('${currency.code} (${currency.symbol})'),
                 trailing: isSelected
                     ? Icon(
-                        Icons.check_circle,
+                        Icons.check_circle_rounded,
                         color: Theme.of(context).colorScheme.primary,
                       )
                     : null,
@@ -362,17 +373,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildExportDataTile(BuildContext context, WidgetRef ref) {
     final exportState = ref.watch(exportProvider);
 
-    return ListTile(
-      leading: const Icon(Icons.upload_file),
-      title: const Text('Export Data'),
-      subtitle: const Text('Backup all your data to a file'),
+    return _SettingsRow(
+      icon: Icons.upload_file_rounded,
+      color: AppColors.savings,
+      title: 'Export Data',
+      subtitle: 'Backup all your data to a file',
       trailing: exportState.isLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.chevron_right),
+          ? const _RowSpinner()
+          : const _Chevron(),
       enabled: !exportState.isLoading,
       onTap: () => _handleExport(context, ref),
     );
@@ -381,17 +389,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildImportDataTile(BuildContext context, WidgetRef ref) {
     final importState = ref.watch(importProvider);
 
-    return ListTile(
-      leading: const Icon(Icons.download),
-      title: const Text('Import Data'),
-      subtitle: const Text('Restore data from a backup file'),
+    return _SettingsRow(
+      icon: Icons.download_rounded,
+      color: AppColors.expense,
+      title: 'Import Data',
+      subtitle: 'Restore data from a backup file',
       trailing: importState.isLoading
-          ? const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : const Icon(Icons.chevron_right),
+          ? const _RowSpinner()
+          : const _Chevron(),
       enabled: !importState.isLoading,
       onTap: () => _handleImport(context, ref),
     );
@@ -482,7 +487,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('$biometricType authentication enabled'),
-              backgroundColor: Colors.green,
+              backgroundColor: context.glass.income,
             ),
           );
         }
@@ -492,7 +497,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(result.errorMessage ?? 'Authentication failed'),
-              backgroundColor: Colors.red,
+              backgroundColor: context.glass.expense,
             ),
           );
         }
@@ -521,7 +526,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               content: Text(
                 result.errorMessage ?? 'Authentication required to disable',
               ),
-              backgroundColor: Colors.red,
+              backgroundColor: context.glass.expense,
             ),
           );
         }
@@ -569,7 +574,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(exportState.error!),
-          backgroundColor: Colors.red,
+          backgroundColor: context.glass.expense,
         ),
       );
     } else if (exportState.filePath != null) {
@@ -589,7 +594,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
-              icon: const Icon(Icons.share),
+              icon: const Icon(Icons.share_rounded),
               label: const Text('Share'),
             ),
           ],
@@ -624,7 +629,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+            style: FilledButton.styleFrom(
+              backgroundColor: context.glass.expense,
+            ),
             child: const Text('Import'),
           ),
         ],
@@ -645,7 +652,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(importState.error!),
-          backgroundColor: Colors.red,
+          backgroundColor: context.glass.expense,
         ),
       );
     } else if (importState.result != null) {
@@ -664,9 +671,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   Text(result.message),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Imported:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                   const SizedBox(height: 8),
                   Text('• ${result.stats.usersImported} users'),
@@ -686,7 +693,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Total: ${result.stats.totalItems} items',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: Theme.of(context).textTheme.titleSmall,
                   ),
                 ],
               ),
@@ -704,10 +711,165 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(result.error ?? 'Import failed'),
-            backgroundColor: Colors.red,
+            backgroundColor: context.glass.expense,
           ),
         );
       }
     }
+  }
+}
+
+IconData _themeIcon(AppThemeMode mode) {
+  switch (mode) {
+    case AppThemeMode.light:
+      return Icons.light_mode_rounded;
+    case AppThemeMode.dark:
+      return Icons.dark_mode_rounded;
+    case AppThemeMode.system:
+      return Icons.brightness_auto_rounded;
+  }
+}
+
+/// A labelled group of settings rows on a single glass panel.
+class _SettingsGroup extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _SettingsGroup({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final rows = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      if (i > 0) rows.add(const Divider(indent: 66, endIndent: 16));
+      rows.add(children[i]);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(6, 4, 6, 10),
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.1,
+              ),
+            ),
+          ),
+          GlassCard(
+            padding: EdgeInsets.zero,
+            radius: AppTheme.radiusL,
+            child: Column(mainAxisSize: MainAxisSize.min, children: rows),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One settings row: glass icon, title, subtitle and a trailing control.
+class _SettingsRow extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  const _SettingsRow({
+    required this.icon,
+    required this.color,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: enabled ? onTap : null,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+            child: Row(
+              children: [
+                GlassIcon(icon, color: color, size: 36),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Chevron extends StatelessWidget {
+  const _Chevron();
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(
+      Icons.chevron_right_rounded,
+      color: Theme.of(context).colorScheme.onSurfaceVariant,
+    );
+  }
+}
+
+class _RowSpinner extends StatelessWidget {
+  const _RowSpinner();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(4),
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
   }
 }

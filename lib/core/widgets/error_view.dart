@@ -1,40 +1,41 @@
 import 'package:flutter/material.dart';
 
-/// Reusable error view widget
+import 'glass/glass.dart';
+
+/// Error state with a glass warning icon and optional retry.
 class ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
 
-  const ErrorView({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const ErrorView({super.key, required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(32),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
+            const GlassIcon(
+              Icons.error_outline_rounded,
+              color: AppColors.expense,
+              size: 80,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
+              style: theme.textTheme.bodyLarge,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              ElevatedButton(
+              const SizedBox(height: 20),
+              GradientButton(
+                label: 'Retry',
+                icon: Icons.refresh_rounded,
                 onPressed: onRetry,
-                child: const Text('Retry'),
+                expand: false,
               ),
             ],
           ],
@@ -43,4 +44,3 @@ class ErrorView extends StatelessWidget {
     );
   }
 }
-

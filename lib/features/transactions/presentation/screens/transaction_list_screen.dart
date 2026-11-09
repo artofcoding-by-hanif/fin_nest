@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/transactions_table.dart';
 import '../../../../core/widgets/currency_text.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../providers/transaction_list_provider.dart';
 import 'add_expense_screen.dart';
 import 'add_income_screen.dart';
@@ -71,14 +73,13 @@ class TransactionListScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final groupedTransactions = ref.watch(groupedTransactionsProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Transactions'),
-        elevation: 0,
         actions: [
           // Filter button
           PopupMenuButton<TransactionFilter>(
-            icon: const Icon(Icons.filter_list),
+            icon: const Icon(Icons.filter_list_rounded),
             tooltip: 'Filter',
             onSelected: (filter) {
               ref
@@ -106,13 +107,13 @@ class TransactionListScreen extends ConsumerWidget {
         children: [
           // Date Range Filter
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
             child: Row(
               children: [
                 Text(
-                  'Period:',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Period',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -127,20 +128,22 @@ class TransactionListScreen extends ConsumerWidget {
                         final isSelected = selectedFilter == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(filter.label),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              if (selected) {
-                                ref
-                                        .read(
-                                          selectedTransactionDateRangeProvider
-                                              .notifier,
-                                        )
-                                        .state =
-                                    filter;
-                              }
-                            },
+                          child: GlassChips(
+                            child: FilterChip(
+                              label: Text(filter.label),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  ref
+                                          .read(
+                                            selectedTransactionDateRangeProvider
+                                                .notifier,
+                                          )
+                                          .state =
+                                      filter;
+                                }
+                              },
+                            ),
                           ),
                         );
                       }).toList(),
@@ -173,33 +176,10 @@ class TransactionListScreen extends ConsumerWidget {
                 });
 
                 if (filteredGrouped.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: 80,
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No transactions in this period',
-                          style: theme.textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Try selecting a different date range',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return const EmptyState(
+                    title: 'No transactions in this period',
+                    message: 'Try selecting a different date range',
+                    icon: Icons.receipt_long_rounded,
                   );
                 }
 
@@ -208,6 +188,7 @@ class TransactionListScreen extends ConsumerWidget {
                   ..sort((a, b) => b.compareTo(a));
 
                 return ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                   itemCount: sortedDates.length,
                   itemBuilder: (context, index) {
                     final date = sortedDates[index];
@@ -218,27 +199,20 @@ class TransactionListScreen extends ConsumerWidget {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error loading transactions: $error'),
-                  ],
-                ),
+              error: (error, stack) => EmptyState(
+                title: 'Something went wrong',
+                message: 'Error loading transactions: $error',
+                icon: Icons.error_outline_rounded,
+                color: context.glass.expense,
               ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GradientFab(
         onPressed: () => _showAddTransactionMenu(context),
-        child: const Icon(Icons.add),
+        icon: Icons.add_rounded,
+        tooltip: 'Add transaction',
       ),
     );
   }
@@ -247,30 +221,52 @@ class TransactionListScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.add_circle, color: Colors.green),
-              title: const Text('Add Income'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddIncomeScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.remove_circle, color: Colors.red),
-              title: const Text('Add Expense'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
-                );
-              },
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GlassTile(
+                leading: GlassIcon(
+                  Icons.south_west_rounded,
+                  gradient: AppColors.incomeGradient,
+                  color: context.glass.income,
+                  size: 44,
+                ),
+                title: const Text('Add Income'),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AddIncomeScreen()),
+                  );
+                },
+              ),
+              GlassTile(
+                margin: EdgeInsets.zero,
+                leading: GlassIcon(
+                  Icons.north_east_rounded,
+                  gradient: AppColors.expenseGradient,
+                  color: context.glass.expense,
+                  size: 44,
+                ),
+                title: const Text('Add Expense'),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AddExpenseScreen()),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -287,6 +283,7 @@ class _DateGroup extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final glass = context.glass;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -308,20 +305,23 @@ class _DateGroup extends ConsumerWidget {
         .where((t) => t.type == TransactionType.expense)
         .fold<int>(0, (sum, t) => sum + t.amountInCents);
 
+    final totalStyle = theme.textTheme.labelMedium?.copyWith(
+      fontFeatures: AppTypography.tabular,
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Date header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: theme.colorScheme.surfaceContainerHighest,
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 dateLabel,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
               Row(
@@ -329,20 +329,14 @@ class _DateGroup extends ConsumerWidget {
                   if (totalIncome > 0) ...[
                     Text(
                       '+${formatCurrency(ref, totalIncome)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: totalStyle?.copyWith(color: glass.income),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                   ],
                   if (totalExpense > 0)
                     Text(
                       '-${formatCurrency(ref, totalExpense)}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.red,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: totalStyle?.copyWith(color: glass.expense),
                     ),
                 ],
               ),
@@ -367,6 +361,7 @@ class _TransactionItem extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final glass = context.glass;
     final transactionDetails = ref.watch(
       transactionDetailsProvider(transaction.id),
     );
@@ -376,101 +371,95 @@ class _TransactionItem extends ConsumerWidget {
         if (details == null) return const SizedBox.shrink();
 
         final isIncome = transaction.type == TransactionType.income;
-        final amount = transaction.amountInCents / 100;
+        final typeColor = isIncome ? glass.income : glass.expense;
+        final subtitleParts = [
+          if (details.category != null) details.category!.name,
+          if (details.account != null) details.account!.name,
+        ];
 
-        return Dismissible(
-          key: Key('transaction_${transaction.id}'),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.only(right: 16),
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          confirmDismiss: (direction) async {
-            return await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Delete Transaction'),
-                content: const Text(
-                  'Are you sure you want to delete this transaction?',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('CANCEL'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text(
-                      'DELETE',
-                      style: TextStyle(color: Colors.red),
-                    ),
-                  ),
-                ],
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Dismissible(
+            key: Key('transaction_${transaction.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                gradient: AppColors.expenseGradient,
+                borderRadius: BorderRadius.circular(AppTheme.radiusM),
               ),
-            );
-          },
-          onDismissed: (direction) async {
-            await ref.read(deleteTransactionProvider)(transaction.id);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Transaction deleted')),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.white,
+              ),
+            ),
+            confirmDismiss: (direction) async {
+              return await showDialog<bool>(
+                context: context,
+                builder: (context) => const _DeleteDialog(),
               );
-            }
-          },
-          child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: details.category?.color != null
-                  ? Color(
-                      int.parse(
-                        details.category!.color!.replaceFirst('#', '0xFF'),
-                      ),
-                    )
-                  : (isIncome ? Colors.green : Colors.red).withValues(
-                      alpha: 0.2,
-                    ),
-              child: Icon(
-                isIncome ? Icons.arrow_downward : Icons.arrow_upward,
-                color: isIncome ? Colors.green : Colors.red,
+            },
+            onDismissed: (direction) async {
+              await ref.read(deleteTransactionProvider)(transaction.id);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Transaction deleted')),
+                );
+              }
+            },
+            child: GlassTile(
+              margin: EdgeInsets.zero,
+              leading: GlassIcon(
+                details.category != null
+                    ? CategoryVisuals.icon(details.category!.icon)
+                    : (isIncome
+                          ? Icons.south_west_rounded
+                          : Icons.north_east_rounded),
+                color: details.category != null
+                    ? CategoryVisuals.vivid(
+                        details.category!.color,
+                        fallback: typeColor,
+                      )
+                    : typeColor,
+                size: 42,
               ),
-            ),
-            title: Text(
-              transaction.description,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.w500,
+              title: Text(transaction.description),
+              subtitle: subtitleParts.isEmpty
+                  ? null
+                  : Text(subtitleParts.join(' · ')),
+              trailing: Text(
+                '${isIncome ? '+' : '-'}${formatCurrency(ref, transaction.amountInCents)}',
+                style: AppTypography.amount(
+                  15,
+                  weight: FontWeight.w600,
+                ).copyWith(color: typeColor),
               ),
+              onTap: () => _showTransactionDetails(context, ref, transaction),
             ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (details.category != null) Text(details.category!.name),
-                if (details.account != null)
-                  Text(
-                    details.account!.name,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-              ],
-            ),
-            trailing: Text(
-              '${isIncome ? '+' : '-'}${formatCurrency(ref, transaction.amountInCents)}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: isIncome ? Colors.green : Colors.red,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            onTap: () => _showTransactionDetails(context, ref, transaction),
           ),
         );
       },
-      loading: () => const ListTile(
-        leading: CircularProgressIndicator(),
-        title: Text('Loading...'),
+      loading: () => GlassTile(
+        leading: const SizedBox(
+          width: 42,
+          height: 42,
+          child: Padding(
+            padding: EdgeInsets.all(10),
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+        title: Text(
+          'Loading...',
+          style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+        ),
       ),
-      error: (error, stack) => ListTile(
-        leading: const Icon(Icons.error, color: Colors.red),
+      error: (error, stack) => GlassTile(
+        leading: GlassIcon(
+          Icons.error_outline_rounded,
+          color: glass.expense,
+          size: 42,
+        ),
         title: Text('Error: $error'),
       ),
     );
@@ -489,6 +478,30 @@ class _TransactionItem extends ConsumerWidget {
   }
 }
 
+/// Confirmation dialog for deleting a transaction.
+class _DeleteDialog extends StatelessWidget {
+  const _DeleteDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Delete Transaction'),
+      content: const Text('Are you sure you want to delete this transaction?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('CANCEL'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: TextButton.styleFrom(foregroundColor: context.glass.expense),
+          child: const Text('DELETE'),
+        ),
+      ],
+    );
+  }
+}
+
 /// Bottom sheet for transaction details
 class _TransactionDetailsSheet extends ConsumerWidget {
   final TransactionEntity transaction;
@@ -498,6 +511,7 @@ class _TransactionDetailsSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final glass = context.glass;
     final transactionDetails = ref.watch(
       transactionDetailsProvider(transaction.id),
     );
@@ -507,10 +521,11 @@ class _TransactionDetailsSheet extends ConsumerWidget {
         if (details == null) return const SizedBox.shrink();
 
         final isIncome = transaction.type == TransactionType.income;
+        final typeColor = isIncome ? glass.income : glass.expense;
 
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,27 +535,66 @@ class _TransactionDetailsSheet extends ConsumerWidget {
                   children: [
                     Text(
                       'Transaction Details',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: theme.textTheme.titleLarge,
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const Icon(Icons.close_rounded),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
-                const SizedBox(height: 24),
-                _DetailRow(
-                  label: 'Amount',
-                  value:
-                      '${isIncome ? '+' : '-'}${formatCurrency(ref, transaction.amountInCents)}',
-                  valueColor: isIncome ? Colors.green : Colors.red,
+                const SizedBox(height: 16),
+                // Amount hero
+                GlassCard(
+                  blur: false,
+                  tint: typeColor,
+                  padding: const EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      GlassIcon(
+                        details.category != null
+                            ? CategoryVisuals.icon(details.category!.icon)
+                            : (isIncome
+                                  ? Icons.south_west_rounded
+                                  : Icons.north_east_rounded),
+                        color: details.category != null
+                            ? CategoryVisuals.vivid(
+                                details.category!.color,
+                                fallback: typeColor,
+                              )
+                            : typeColor,
+                        size: 48,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isIncome ? 'Income' : 'Expense',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: GradientText(
+                                '${isIncome ? '+' : '-'}${formatCurrency(ref, transaction.amountInCents)}',
+                                style: AppTypography.amount(30),
+                                gradient: isIncome
+                                    ? AppColors.incomeGradient
+                                    : AppColors.expenseGradient,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                _DetailRow(
-                  label: 'Type',
-                  value: isIncome ? 'Income' : 'Expense',
-                ),
+                const SizedBox(height: 20),
                 if (details.category != null)
                   _DetailRow(label: 'Category', value: details.category!.name),
                 if (details.account != null)
@@ -557,61 +611,48 @@ class _TransactionDetailsSheet extends ConsumerWidget {
                 ),
                 if (transaction.notes != null)
                   _DetailRow(label: 'Notes', value: transaction.notes!),
-                const SizedBox(height: 24),
+                const SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          final confirmed = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Delete Transaction'),
-                              content: const Text(
-                                'Are you sure you want to delete this transaction?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(false),
-                                  child: const Text('CANCEL'),
-                                ),
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                  child: const Text(
-                                    'DELETE',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
+                      child: SizedBox(
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: glass.expense,
+                            side: BorderSide(
+                              color: glass.expense.withValues(alpha: 0.5),
                             ),
-                          );
-
-                          if (confirmed == true && context.mounted) {
-                            await ref.read(deleteTransactionProvider)(
-                              transaction.id,
+                          ),
+                          onPressed: () async {
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => const _DeleteDialog(),
                             );
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Transaction deleted'),
-                                ),
+
+                            if (confirmed == true && context.mounted) {
+                              await ref.read(deleteTransactionProvider)(
+                                transaction.id,
                               );
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Transaction deleted'),
+                                  ),
+                                );
+                              }
                             }
-                          }
-                        },
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        label: const Text(
-                          'Delete',
-                          style: TextStyle(color: Colors.red),
+                          },
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          label: const Text('Delete'),
                         ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: FilledButton.icon(
+                      child: GradientButton(
+                        height: 52,
                         onPressed: () {
                           // TODO: Navigate to edit screen
                           Navigator.pop(context);
@@ -621,8 +662,8 @@ class _TransactionDetailsSheet extends ConsumerWidget {
                             ),
                           );
                         },
-                        icon: const Icon(Icons.edit),
-                        label: const Text('Edit'),
+                        icon: Icons.edit_rounded,
+                        label: 'Edit',
                       ),
                     ),
                   ],
@@ -632,8 +673,14 @@ class _TransactionDetailsSheet extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+      loading: () => const Padding(
+        padding: EdgeInsets.all(32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, stack) => Padding(
+        padding: const EdgeInsets.all(32),
+        child: Center(child: Text('Error: $error')),
+      ),
     );
   }
 }
@@ -642,16 +689,15 @@ class _TransactionDetailsSheet extends ConsumerWidget {
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
-  final Color? valueColor;
 
-  const _DetailRow({required this.label, required this.value, this.valueColor});
+  const _DetailRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -660,7 +706,7 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -669,7 +715,6 @@ class _DetailRow extends StatelessWidget {
               value,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: valueColor,
               ),
             ),
           ),

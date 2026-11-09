@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
 
-/// Splash screen shown on app launch
-/// Displays FinNest logo and transitions to onboarding or dashboard
+import '../../../../core/widgets/glass/glass.dart';
+import '../../../../core/widgets/loading_indicator.dart';
+
+/// Splash screen shown on app launch. The parent `App` decides when to
+/// move on to onboarding or the dashboard.
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
@@ -13,54 +15,23 @@ class SplashScreen extends ConsumerStatefulWidget {
 
 class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _controller = AnimationController(
+    duration: const Duration(milliseconds: 1600),
+    vsync: this,
+  )..forward();
 
-  @override
-  void initState() {
-    super.initState();
-
-    // Setup animations
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
-      ),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
-      ),
-    );
-
-    // Start animation
-    _animationController.forward();
-
-    // Navigate after delay
-    _navigateAfterDelay();
-  }
-
-  Future<void> _navigateAfterDelay() async {
-    // Wait for animation to complete plus a bit more
-    await Future.delayed(const Duration(milliseconds: 4000));
-
-    if (mounted) {
-      // This will be handled by the parent widget (App)
-      // The callback will be provided via a parameter
-    }
-  }
+  late final Animation<double> _logo = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.0, 0.55, curve: Curves.easeOutBack),
+  );
+  late final Animation<double> _text = CurvedAnimation(
+    parent: _controller,
+    curve: const Interval(0.35, 0.85, curve: Curves.easeOutCubic),
+  );
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
@@ -68,80 +39,82 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.primary,
+    return GlassScaffold(
+      animateBackground: true,
       body: SafeArea(
         child: Center(
-          child: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Logo with a soft halo
+              FadeTransition(
+                opacity: _logo,
                 child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  scale: Tween(begin: 0.7, end: 1.0).animate(_logo),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      // Logo
                       Container(
-                        padding: const EdgeInsets.all(32),
+                        width: 240,
+                        height: 240,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [Color(0x668B5CF6), Color(0x008B5CF6)],
+                          ),
+                        ),
+                      ),
+                      Container(
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(36),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
+                              color: AppColors.violet.withValues(alpha: 0.5),
+                              blurRadius: 40,
+                              spreadRadius: -6,
+                              offset: const Offset(0, 16),
                             ),
                           ],
                         ),
-                        child: Image.asset(
-                          'finnest_logo.png',
-                          width: 150,
-                          height: 150,
-                          fit: BoxFit.contain,
-                        ),
+                        child: const FinNestLogo(size: 128),
                       ),
-                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
 
-                      // App Name
-                      Text(
+              // Name + tagline
+              FadeTransition(
+                opacity: _text,
+                child: SlideTransition(
+                  position: Tween(
+                    begin: const Offset(0, 0.3),
+                    end: Offset.zero,
+                  ).animate(_text),
+                  child: Column(
+                    children: [
+                      GradientText(
                         'FinNest',
-                        style: theme.textTheme.headlineLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 42,
+                        style: theme.textTheme.displayMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 8),
-
-                      // Tagline
                       Text(
                         'Your Wealth Management Partner',
                         style: theme.textTheme.titleMedium?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                      const SizedBox(height: 48),
-
-                      // Loading indicator
-                      SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withOpacity(0.8),
-                          ),
-                          strokeWidth: 3,
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            },
+              ),
+              const SizedBox(height: 56),
+              const LoadingIndicator(size: 34),
+            ],
           ),
         ),
       ),

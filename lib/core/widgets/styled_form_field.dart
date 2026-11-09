@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Styled text form field with rounded corners and modern design
+import '../theme/app_theme.dart';
+
+/// Frosted glass text field. Borders, fill and label styles come from
+/// the app's `inputDecorationTheme`.
 class StyledTextFormField extends StatelessWidget {
   final TextEditingController? controller;
   final String? labelText;
@@ -39,38 +42,29 @@ class StyledTextFormField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+    final isAmount = keyboardType != null &&
+        keyboardType!.index == TextInputType.number.index &&
+        prefixText != null;
+
     return TextFormField(
       controller: controller,
+      style: isAmount
+          ? AppTypography.amount(20).copyWith(color: theme.colorScheme.onSurface)
+          : theme.textTheme.bodyLarge,
+      cursorColor: theme.colorScheme.primary,
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
         prefixText: prefixText,
+        prefixStyle: isAmount
+            ? AppTypography.amount(20).copyWith(color: theme.colorScheme.primary)
+            : theme.textTheme.bodyLarge?.copyWith(
+                color: theme.colorScheme.primary,
+              ),
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
         filled: filled,
-        fillColor: fillColor ?? theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.outline),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: theme.colorScheme.error, width: 2),
-        ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        fillColor: fillColor,
       ),
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
@@ -82,7 +76,7 @@ class StyledTextFormField extends StatelessWidget {
   }
 }
 
-/// Styled dropdown/selector field with rounded corners
+/// Glass "picker" field that opens a selector when tapped.
 class StyledSelectorField extends StatelessWidget {
   final String? labelText;
   final String displayText;
@@ -105,41 +99,23 @@ class StyledSelectorField extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(AppTheme.radiusM),
       child: InputDecorator(
-        decoration: InputDecoration(
-          labelText: labelText,
-          filled: true,
-          fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.outline),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: BorderSide(color: theme.colorScheme.primary, width: 2),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        ),
+        decoration: InputDecoration(labelText: labelText),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
               child: Text(
                 displayText,
-                style: TextStyle(
+                style: theme.textTheme.bodyLarge?.copyWith(
                   color: hasValue
-                      ? theme.textTheme.bodyLarge?.color
-                      : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
               ),
             ),
             Icon(
-              icon ?? Icons.arrow_drop_down,
+              icon ?? Icons.expand_more_rounded,
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ],
@@ -148,4 +124,3 @@ class StyledSelectorField extends StatelessWidget {
     );
   }
 }
-

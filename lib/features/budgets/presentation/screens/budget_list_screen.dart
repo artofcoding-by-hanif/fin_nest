@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/currency_text.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../providers/budget_provider.dart';
 import '../widgets/budget_progress_card.dart';
 import 'set_category_budget_screen.dart';
@@ -14,12 +17,12 @@ class BudgetListScreen extends ConsumerWidget {
     final budgetProgressAsync = ref.watch(allBudgetProgressProvider);
     final budgetSummaryAsync = ref.watch(budgetSummaryProvider);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: const Text('Budgets'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add_rounded),
             onPressed: () {
               Navigator.push(
                 context,
@@ -50,7 +53,7 @@ class BudgetListScreen extends ConsumerWidget {
               // Budget List
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
                   itemCount: budgetProgress.length,
                   itemBuilder: (context, index) {
                     final progress = budgetProgress[index];
@@ -74,20 +77,9 @@ class BudgetListScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Error loading budgets: $error'),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => ref.refresh(allBudgetProgressProvider),
-                child: const Text('Retry'),
-              ),
-            ],
-          ),
+        error: (error, stack) => ErrorView(
+          message: 'Error loading budgets: $error',
+          onRetry: () => ref.refresh(allBudgetProgressProvider),
         ),
       ),
     );
@@ -107,54 +99,84 @@ class BudgetListScreen extends ConsumerWidget {
         ? (summary.totalSpentInCents / summary.totalBudgetInCents) * 100
         : 0.0;
 
-    return Card(
-      margin: const EdgeInsets.all(16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Overall Budget',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+    final Gradient statusGradient = progressPercentage >= 100
+        ? AppColors.expenseGradient
+        : progressPercentage >= 80
+        ? AppColors.warningGradient
+        : AppColors.incomeGradient;
+    final Color statusColor = progressPercentage >= 100
+        ? context.glass.expense
+        : progressPercentage >= 80
+        ? budgetWarningColor(context)
+        : context.glass.income;
+
+    return GlassCard(
+      margin: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const GlassIcon(
+                Icons.donut_large_rounded,
+                color: AppColors.violet,
+                size: 40,
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Overall Budget', style: theme.textTheme.titleMedium),
+              ),
+              Text(
+                '${progressPercentage.toStringAsFixed(0)}%',
+                style: AppTypography.amount(18).copyWith(color: statusColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(
+            'Spent',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSummaryItem(
+          ),
+          const SizedBox(height: 4),
+          GradientText(
+            totalSpent,
+            style: AppTypography.amount(30),
+            gradient: statusGradient,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 14),
+          BudgetGradientBar(
+            value: progressPercentage / 100,
+            gradient: statusGradient,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryItem(
                   context,
                   'Total Budget',
                   totalBudget,
-                  Colors.blue,
+                  theme.colorScheme.onSurface,
                 ),
-                _buildSummaryItem(context, 'Spent', totalSpent, Colors.orange),
-                _buildSummaryItem(
+              ),
+              Expanded(
+                child: _buildSummaryItem(
                   context,
                   'Remaining',
                   totalRemaining,
                   summary.totalRemainingInCents >= 0
-                      ? Colors.green
-                      : Colors.red,
+                      ? context.glass.income
+                      : context.glass.expense,
+                  alignEnd: true,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            LinearProgressIndicator(
-              value: progressPercentage / 100,
-              backgroundColor: Colors.grey[200],
-              valueColor: AlwaysStoppedAnimation<Color>(
-                progressPercentage >= 100
-                    ? Colors.red
-                    : progressPercentage >= 80
-                    ? Colors.orange
-                    : Colors.green,
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -163,71 +185,53 @@ class BudgetListScreen extends ConsumerWidget {
     BuildContext context,
     String label,
     String value,
-    Color color,
-  ) {
+    Color color, {
+    bool alignEnd = false,
+  }) {
     final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
-          style: theme.textTheme.titleSmall?.copyWith(
-            color: color,
-            fontWeight: FontWeight.bold,
-          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.amount(
+            16,
+            weight: FontWeight.w600,
+          ).copyWith(color: color),
         ),
       ],
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 80,
-              color: Colors.grey[400],
+    return EmptyState(
+      title: 'No Budgets Set',
+      message: 'Set budgets for your expense categories to track your spending',
+      icon: Icons.account_balance_wallet_rounded,
+      color: AppColors.violet,
+      action: GradientButton(
+        label: 'Set Your First Budget',
+        icon: Icons.add_rounded,
+        expand: false,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SetCategoryBudgetScreen(),
             ),
-            const SizedBox(height: 24),
-            Text(
-              'No Budgets Set',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Set budgets for your expense categories to track your spending',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SetCategoryBudgetScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add),
-              label: const Text('Set Your First Budget'),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/savings_transactions_table.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../../../core/widgets/styled_button.dart';
 import '../../../../core/widgets/styled_form_field.dart';
 import '../providers/savings_transactions_provider.dart';
@@ -13,7 +14,7 @@ class AddSavingsTransactionScreen extends ConsumerStatefulWidget {
   final int savingsId;
   final String savingsName;
   final SavingsTransactionEntity?
-  transaction; // null for add, non-null for edit
+      transaction; // null for add, non-null for edit
 
   const AddSavingsTransactionScreen({
     super.key,
@@ -47,8 +48,8 @@ class _AddSavingsTransactionScreenState
       final transaction = widget.transaction!;
       _selectedType = transaction.type;
       _selectedDate = transaction.transactionDate;
-      _amountController.text = (transaction.amountInCents / 100)
-          .toStringAsFixed(2);
+      _amountController.text =
+          (transaction.amountInCents / 100).toStringAsFixed(2);
       _notesController.text = transaction.notes ?? '';
 
       if (transaction.units != null ||
@@ -88,40 +89,6 @@ class _AddSavingsTransactionScreenState
     }
   }
 
-  String _getTransactionTypeLabel(SavingsTransactionType type) {
-    switch (type) {
-      case SavingsTransactionType.deposit:
-        return 'Deposit';
-      case SavingsTransactionType.withdrawal:
-        return 'Withdrawal';
-      case SavingsTransactionType.interest:
-        return 'Interest';
-      case SavingsTransactionType.dividend:
-        return 'Dividend';
-      case SavingsTransactionType.appreciation:
-        return 'Appreciation';
-      case SavingsTransactionType.depreciation:
-        return 'Depreciation';
-    }
-  }
-
-  IconData _getTransactionTypeIcon(SavingsTransactionType type) {
-    switch (type) {
-      case SavingsTransactionType.deposit:
-        return Icons.add_circle_outline;
-      case SavingsTransactionType.withdrawal:
-        return Icons.remove_circle_outline;
-      case SavingsTransactionType.interest:
-        return Icons.trending_up;
-      case SavingsTransactionType.dividend:
-        return Icons.payments;
-      case SavingsTransactionType.appreciation:
-        return Icons.arrow_upward;
-      case SavingsTransactionType.depreciation:
-        return Icons.arrow_downward;
-    }
-  }
-
   Future<void> _saveTransaction() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -140,9 +107,8 @@ class _AddSavingsTransactionScreenState
       final pricePerUnit = _pricePerUnitController.text.isNotEmpty
           ? double.tryParse(_pricePerUnitController.text)
           : null;
-      pricePerUnitInCents = pricePerUnit != null
-          ? (pricePerUnit * 100).round()
-          : null;
+      pricePerUnitInCents =
+          pricePerUnit != null ? (pricePerUnit * 100).round() : null;
     }
 
     try {
@@ -150,9 +116,7 @@ class _AddSavingsTransactionScreenState
 
       if (isEditing) {
         // Update existing transaction
-        await ref
-            .read(savingsTransactionProvider.notifier)
-            .updateTransaction(
+        await ref.read(savingsTransactionProvider.notifier).updateTransaction(
               id: widget.transaction!.id,
               userId: widget.transaction!.userId,
               savingsId: widget.savingsId,
@@ -168,9 +132,7 @@ class _AddSavingsTransactionScreenState
             );
       } else {
         // Add new transaction
-        await ref
-            .read(savingsTransactionProvider.notifier)
-            .addTransaction(
+        await ref.read(savingsTransactionProvider.notifier).addTransaction(
               userId: 1, // TODO: Replace with actual user ID
               savingsId: widget.savingsId,
               type: _selectedType,
@@ -208,8 +170,10 @@ class _AddSavingsTransactionScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(savingsTransactionProvider);
     final isEditing = widget.transaction != null;
+    final theme = Theme.of(context);
+    final typeStyle = SavingsTransactionTypeStyle.of(context, _selectedType);
 
-    return Scaffold(
+    return GlassScaffold(
       appBar: AppBar(
         title: Text(
           '${isEditing ? 'Edit' : 'Add'} Transaction - ${widget.savingsName}',
@@ -218,31 +182,56 @@ class _AddSavingsTransactionScreenState
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            // Transaction Type Selector
-            const Text(
-              'Transaction Type',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<SavingsTransactionType>(
-              value: _selectedType,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
+            // Selected type preview
+            GlassCard(
+              tint: typeStyle.color,
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  GlassIcon(typeStyle.icon, color: typeStyle.color, size: 52),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.savingsName,
+                          style: theme.textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(typeStyle.label,
+                            style: theme.textTheme.titleLarge),
+                      ],
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const SizedBox(height: 20),
+
+            // Transaction Type Selector
+            const SectionHeader(title: 'Transaction Type'),
+            DropdownButtonFormField<SavingsTransactionType>(
+              initialValue: _selectedType,
+              borderRadius: BorderRadius.circular(AppTheme.radiusM),
               items: SavingsTransactionType.values.map((type) {
+                final itemStyle = SavingsTransactionTypeStyle.of(context, type);
                 return DropdownMenuItem(
                   value: type,
                   child: Row(
                     children: [
-                      Icon(_getTransactionTypeIcon(type), size: 20),
-                      const SizedBox(width: 8),
-                      Text(_getTransactionTypeLabel(type)),
+                      GlassIcon(
+                        itemStyle.icon,
+                        color: itemStyle.color,
+                        size: 28,
+                        glow: false,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(itemStyle.label),
                     ],
                   ),
                 );
@@ -278,24 +267,16 @@ class _AddSavingsTransactionScreenState
                 }
                 return null;
               },
-              prefixIcon: const Icon(Icons.currency_rupee),
+              prefixIcon: const Icon(Icons.currency_rupee_rounded),
             ),
             const SizedBox(height: 16),
 
             // Date Selector
-            InkWell(
+            StyledSelectorField(
+              labelText: 'Transaction Date',
+              displayText: DateFormat('dd MMM yyyy').format(_selectedDate),
+              icon: Icons.calendar_today_rounded,
               onTap: () => _selectDate(context),
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Transaction Date',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.calendar_today),
-                ),
-                child: Text(
-                  DateFormat('dd MMM yyyy').format(_selectedDate),
-                  style: const TextStyle(fontSize: 16),
-                ),
-              ),
             ),
             const SizedBox(height: 16),
 
@@ -305,26 +286,34 @@ class _AddSavingsTransactionScreenState
               labelText: 'Notes (Optional)',
               hintText: 'Add notes about this transaction',
               maxLines: 3,
-              prefixIcon: const Icon(Icons.note),
+              prefixIcon: const Icon(Icons.notes_rounded),
             ),
             const SizedBox(height: 16),
 
             // Advanced Fields Toggle
-            CheckboxListTile(
-              title: const Text('Show advanced fields (Units & Price)'),
-              subtitle: const Text('For mutual funds, stocks, etc.'),
-              value: _showAdvancedFields,
-              onChanged: (value) {
-                setState(() {
-                  _showAdvancedFields = value ?? false;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
+            GlassCard(
+              blur: false,
+              radius: AppTheme.radiusM,
+              padding: EdgeInsets.zero,
+              child: CheckboxListTile(
+                title: const Text('Show advanced fields (Units & Price)'),
+                subtitle: const Text('For mutual funds, stocks, etc.'),
+                value: _showAdvancedFields,
+                onChanged: (value) {
+                  setState(() {
+                    _showAdvancedFields = value ?? false;
+                  });
+                },
+                controlAffinity: ListTileControlAffinity.leading,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusM),
+                ),
+              ),
             ),
 
             // Advanced Fields
             if (_showAdvancedFields) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
               StyledTextFormField(
                 controller: _unitsController,
                 labelText: 'Units (Optional)',
@@ -335,7 +324,7 @@ class _AddSavingsTransactionScreenState
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,4}')),
                 ],
-                prefixIcon: const Icon(Icons.numbers),
+                prefixIcon: const Icon(Icons.numbers_rounded),
               ),
               const SizedBox(height: 16),
               StyledTextFormField(
@@ -348,7 +337,7 @@ class _AddSavingsTransactionScreenState
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
                 ],
-                prefixIcon: const Icon(Icons.price_change),
+                prefixIcon: const Icon(Icons.price_change_rounded),
               ),
             ],
 
@@ -359,10 +348,81 @@ class _AddSavingsTransactionScreenState
               text: 'Add Transaction',
               onPressed: state.isLoading ? null : _saveTransaction,
               isLoading: state.isLoading,
+              icon: isEditing ? Icons.check_rounded : Icons.add_rounded,
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Label, glass icon and tint for each [SavingsTransactionType].
+/// Shared with the savings detail screen.
+class SavingsTransactionTypeStyle {
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  /// Whether this type adds to the balance.
+  final bool isCredit;
+
+  const SavingsTransactionTypeStyle._(
+    this.label,
+    this.icon,
+    this.color,
+    this.isCredit,
+  );
+
+  static SavingsTransactionTypeStyle of(
+    BuildContext context,
+    SavingsTransactionType type,
+  ) {
+    final income = context.glass.income;
+    final expense = context.glass.expense;
+    switch (type) {
+      case SavingsTransactionType.deposit:
+        return SavingsTransactionTypeStyle._(
+          'Deposit',
+          Icons.add_circle_rounded,
+          income,
+          true,
+        );
+      case SavingsTransactionType.withdrawal:
+        return SavingsTransactionTypeStyle._(
+          'Withdrawal',
+          Icons.remove_circle_rounded,
+          expense,
+          false,
+        );
+      case SavingsTransactionType.interest:
+        return SavingsTransactionTypeStyle._(
+          'Interest',
+          Icons.trending_up_rounded,
+          income,
+          true,
+        );
+      case SavingsTransactionType.dividend:
+        return SavingsTransactionTypeStyle._(
+          'Dividend',
+          Icons.payments_rounded,
+          income,
+          true,
+        );
+      case SavingsTransactionType.appreciation:
+        return SavingsTransactionTypeStyle._(
+          'Appreciation',
+          Icons.arrow_upward_rounded,
+          income,
+          true,
+        );
+      case SavingsTransactionType.depreciation:
+        return SavingsTransactionTypeStyle._(
+          'Depreciation',
+          Icons.arrow_downward_rounded,
+          expense,
+          false,
+        );
+    }
   }
 }

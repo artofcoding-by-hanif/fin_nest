@@ -45,7 +45,8 @@ void main() {
     await pumpOnboarding(tester, onComplete: () {});
 
     await tester.tap(find.text('Next'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.text(OnboardingPages.pages[1].title), findsOneWidget);
   });
@@ -68,7 +69,8 @@ void main() {
 
     for (var i = 0; i < OnboardingPages.pages.length - 1; i++) {
       await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
     }
 
     expect(find.text(OnboardingPages.pages.last.title), findsOneWidget);

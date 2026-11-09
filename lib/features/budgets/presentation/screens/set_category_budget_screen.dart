@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/providers/settings_provider.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../../../core/widgets/styled_button.dart';
 import '../../../../core/widgets/styled_form_field.dart';
 import '../providers/budget_provider.dart';
@@ -115,7 +116,9 @@ class _SetCategoryBudgetScreenState
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            style: TextButton.styleFrom(
+              foregroundColor: context.glass.expense,
+            ),
             child: const Text('Remove'),
           ),
         ],
@@ -168,13 +171,19 @@ class _SetCategoryBudgetScreenState
       expenseCategoriesWithBudgetsProvider,
     );
 
-    return Scaffold(
+    final theme = Theme.of(context);
+    final isEditing = widget.categoryId != null;
+
+    return GlassScaffold(
       appBar: AppBar(
         title: Text(widget.categoryId != null ? 'Edit Budget' : 'Set Budget'),
         actions: widget.categoryId != null
             ? [
                 IconButton(
-                  icon: const Icon(Icons.delete_outline),
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: context.glass.expense,
+                  ),
                   onPressed: _isLoading ? null : _removeBudget,
                   tooltip: 'Remove Budget',
                 ),
@@ -184,49 +193,95 @@ class _SetCategoryBudgetScreenState
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
           children: [
-            // Category Selection
-            if (widget.categoryId == null)
-              expenseCategoriesAsync.when(
-                data: (categories) => _buildCategorySelector(categories),
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Text('Error: $error'),
-              ),
+            // Header
+            Row(
+              children: [
+                const GlassIcon(
+                  Icons.pie_chart_rounded,
+                  color: AppColors.violet,
+                  size: 52,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isEditing ? 'Adjust your limit' : 'Plan your spending',
+                        style: theme.textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Set a monthly cap for this category',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
 
-            if (widget.categoryId == null) const SizedBox(height: 24),
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Category Selection
+                  if (!isEditing)
+                    expenseCategoriesAsync.when(
+                      data: (categories) => _buildCategorySelector(categories),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (error, stack) => Text(
+                        'Error: $error',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: context.glass.expense,
+                        ),
+                      ),
+                    ),
 
-            // Amount Input
-            StyledTextFormField(
-              controller: _amountController,
-              labelText: 'Monthly Budget Amount',
-              prefixText: '${ref.watch(currentCurrencyProvider).symbol} ',
-              prefixIcon: const Icon(Icons.account_balance_wallet),
-              hintText: 'Enter maximum monthly spending',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+                  if (!isEditing) const SizedBox(height: 20),
+
+                  // Amount Input
+                  StyledTextFormField(
+                    controller: _amountController,
+                    labelText: 'Monthly Budget Amount',
+                    prefixText:
+                        '${ref.watch(currentCurrencyProvider).symbol} ',
+                    prefixIcon: const Icon(
+                      Icons.account_balance_wallet_rounded,
+                    ),
+                    hintText: 'Enter maximum monthly spending',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter an amount';
+                      }
+                      final amount = double.tryParse(value);
+                      if (amount == null || amount <= 0) {
+                        return 'Please enter a valid amount';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter an amount';
-                }
-                final amount = double.tryParse(value);
-                if (amount == null || amount <= 0) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 28),
 
             // Save Button
             StyledElevatedButton(
               onPressed: _saveBudget,
               text: 'Save Budget',
-              icon: Icons.check,
+              icon: Icons.check_rounded,
               isLoading: _isLoading,
-              backgroundColor: Colors.orange,
             ),
             const SizedBox(height: 16),
           ],
@@ -243,21 +298,33 @@ class _SetCategoryBudgetScreenState
       children: [
         Text(
           'Select Category',
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+          style: theme.textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
         DropdownButtonFormField<int>(
           initialValue: _selectedCategoryId,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Choose a category',
-          ),
+          decoration: const InputDecoration(hintText: 'Choose a category'),
+          borderRadius: BorderRadius.circular(AppTheme.radiusM),
           items: categories.map((category) {
             return DropdownMenuItem(
               value: category.id,
-              child: Text(category.name),
+              child: Row(
+                children: [
+                  GlassIcon(
+                    CategoryVisuals.icon(category.icon),
+                    color: CategoryVisuals.vivid(category.color),
+                    size: 28,
+                    glow: false,
+                  ),
+                  const SizedBox(width: 12),
+                  Flexible(
+                    child: Text(
+                      category.name,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             );
           }).toList(),
           onChanged: (value) {

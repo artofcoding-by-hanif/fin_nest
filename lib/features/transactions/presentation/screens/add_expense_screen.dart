@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/accounts_table.dart';
 import '../../../../core/providers/settings_provider.dart';
-import '../../../../core/widgets/styled_button.dart';
+import '../../../../core/widgets/glass/glass.dart';
 import '../../../../core/widgets/styled_form_field.dart';
 import '../providers/add_expense_provider.dart';
 
@@ -106,9 +106,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
       final amount = double.parse(_amountController.text);
       final amountInCents = (amount * 100).round();
 
-      await ref
-          .read(addExpenseProvider.notifier)
-          .addExpense(
+      await ref.read(addExpenseProvider.notifier).addExpense(
             accountId: _selectedAccount!.id,
             categoryId: _selectedCategory!.id,
             amountInCents: amountInCents,
@@ -134,8 +132,8 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Add Expense'), elevation: 0),
+    return GlassScaffold(
+      appBar: AppBar(title: const Text('Add Expense')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -146,7 +144,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
               controller: _amountController,
               labelText: 'Amount',
               prefixText: '${ref.watch(currentCurrencyProvider).symbol} ',
-              prefixIcon: const Icon(Icons.attach_money),
+              prefixIcon: const Icon(Icons.payments_rounded),
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
@@ -170,7 +168,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             StyledSelectorField(
               labelText: 'Category',
               displayText: _selectedCategory?.name ?? 'Select category',
-              icon: Icons.category,
+              icon: Icons.category_rounded,
               hasValue: _selectedCategory != null,
               onTap: () => _selectCategory(context),
             ),
@@ -180,7 +178,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             StyledSelectorField(
               labelText: 'Payment Method',
               displayText: _selectedAccount?.name ?? 'Select account',
-              icon: Icons.account_balance_wallet,
+              icon: Icons.account_balance_wallet_rounded,
               hasValue: _selectedAccount != null,
               onTap: () => _selectAccount(context),
             ),
@@ -190,7 +188,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             StyledSelectorField(
               labelText: 'Date',
               displayText: DateFormat('MMM dd, yyyy').format(_selectedDate),
-              icon: Icons.calendar_today,
+              icon: Icons.calendar_today_rounded,
               onTap: () => _selectDate(context),
             ),
             const SizedBox(height: 20),
@@ -199,7 +197,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             StyledTextFormField(
               controller: _descriptionController,
               labelText: 'Description',
-              prefixIcon: const Icon(Icons.description),
+              prefixIcon: const Icon(Icons.description_rounded),
               hintText: 'e.g., Grocery shopping, Dinner',
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -214,18 +212,18 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
             StyledTextFormField(
               controller: _notesController,
               labelText: 'Notes (optional)',
-              prefixIcon: const Icon(Icons.note),
+              prefixIcon: const Icon(Icons.sticky_note_2_rounded),
               hintText: 'Add any additional notes',
               maxLines: 3,
             ),
             const SizedBox(height: 32),
 
             // Save button
-            StyledElevatedButton(
+            GradientButton(
               onPressed: _saveExpense,
-              text: 'Save Expense',
-              icon: Icons.check,
-              backgroundColor: Colors.red,
+              label: 'Save Expense',
+              icon: Icons.check_rounded,
+              gradient: AppColors.expenseGradient,
             ),
             const SizedBox(height: 16),
           ],
@@ -235,7 +233,7 @@ class _AddExpenseScreenState extends ConsumerState<AddExpenseScreen> {
   }
 }
 
-// Category picker widget
+/// Category picker modal bottom sheet
 class _CategoryPicker extends StatelessWidget {
   final List<CategoryEntity> categories;
 
@@ -243,47 +241,56 @@ class _CategoryPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Select Category',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return ListTile(
-                  leading: Icon(
-                    Icons.category,
-                    color: category.color != null
-                        ? Color(
-                            int.parse(
-                              category.color!.replaceFirst('#', '0xFF'),
-                            ),
-                          )
-                        : null,
-                  ),
-                  title: Text(category.name),
-                  onTap: () => Navigator.of(context).pop(category),
-                );
-              },
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SheetTitle('Select Category'),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: categories.length,
+                itemBuilder: (context, index) =>
+                    _CategoryRow(category: categories[index]),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-// Account picker widget
+class _CategoryRow extends StatelessWidget {
+  final CategoryEntity category;
+
+  const _CategoryRow({required this.category});
+
+  @override
+  Widget build(BuildContext context) {
+    return GlassTile(
+      leading: GlassIcon(
+        CategoryVisuals.icon(category.icon),
+        color: CategoryVisuals.vivid(
+          category.color,
+          fallback: AppColors.expense,
+        ),
+        size: 40,
+      ),
+      title: Text(category.name),
+      trailing: Icon(
+        Icons.chevron_right_rounded,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      onTap: () => Navigator.of(context).pop(category),
+    );
+  }
+}
+
+/// Account picker modal bottom sheet
 class _AccountPicker extends StatelessWidget {
   final List<AccountEntity> accounts;
 
@@ -291,55 +298,72 @@ class _AccountPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Select Account', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
-          Flexible(
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: accounts.length,
-              itemBuilder: (context, index) {
-                final account = accounts[index];
-                return ListTile(
-                  leading: Icon(
-                    _getAccountIcon(account.type),
-                    color: account.color != null
-                        ? Color(
-                            int.parse(account.color!.replaceFirst('#', '0xFF')),
-                          )
-                        : null,
-                  ),
-                  title: Text(account.name),
-                  subtitle: Text(account.type.name.toUpperCase()),
-                  onTap: () => Navigator.of(context).pop(account),
-                );
-              },
+    final theme = Theme.of(context);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const _SheetTitle('Select Account'),
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: accounts.length,
+                itemBuilder: (context, index) {
+                  final account = accounts[index];
+                  return GlassTile(
+                    leading: GlassIcon(
+                      _accountIcon(account),
+                      color: CategoryVisuals.vivid(
+                        account.color,
+                        fallback: theme.colorScheme.secondary,
+                      ),
+                      size: 40,
+                    ),
+                    title: Text(account.name),
+                    subtitle: Text(account.type.name.toUpperCase()),
+                    onTap: () => Navigator.of(context).pop(account),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  IconData _getAccountIcon(AccountType type) {
-    switch (type) {
-      case AccountType.cash:
-        return Icons.money;
-      case AccountType.bank:
-        return Icons.account_balance;
-      case AccountType.creditCard:
-        return Icons.credit_card;
-      case AccountType.investment:
-        return Icons.trending_up;
-      case AccountType.loan:
-        return Icons.account_balance_wallet;
-      case AccountType.other:
-        return Icons.account_balance_wallet;
-    }
+/// Glass-styled header for the picker sheets.
+class _SheetTitle extends StatelessWidget {
+  final String title;
+
+  const _SheetTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 16),
+      child: Text(title, style: Theme.of(context).textTheme.titleLarge),
+    );
+  }
+}
+
+IconData _accountIcon(AccountEntity account) {
+  switch (account.type) {
+    case AccountType.cash:
+      return Icons.payments_rounded;
+    case AccountType.bank:
+      return Icons.account_balance_rounded;
+    case AccountType.creditCard:
+      return Icons.credit_card_rounded;
+    case AccountType.investment:
+      return Icons.trending_up_rounded;
+    case AccountType.loan:
+    case AccountType.other:
+      return Icons.account_balance_wallet_rounded;
   }
 }

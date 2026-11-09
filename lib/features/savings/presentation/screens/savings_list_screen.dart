@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/database/app_database.dart';
 import '../../../../core/database/tables/savings_table.dart';
 import '../../../../core/widgets/currency_text.dart';
+import '../../../../core/widgets/empty_state.dart';
+import '../../../../core/widgets/error_view.dart';
+import '../../../../core/widgets/glass/glass.dart';
+import '../../../../core/widgets/loading_indicator.dart';
 import '../providers/savings_provider.dart';
 import 'add_edit_savings_screen.dart';
 import 'add_savings_transaction_screen.dart';
@@ -70,31 +73,6 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
   SavingsListDateRangeFilter _selectedDateRange =
       SavingsListDateRangeFilter.allTime;
 
-  String _getCategoryLabel(SavingsCategory category) {
-    switch (category) {
-      case SavingsCategory.nps:
-        return 'NPS';
-      case SavingsCategory.lic:
-        return 'LIC';
-      case SavingsCategory.mutualFund:
-        return 'Mutual Fund';
-      case SavingsCategory.ksfe:
-        return 'KSFE';
-      case SavingsCategory.gold:
-        return 'Gold';
-      case SavingsCategory.cash:
-        return 'Cash';
-      case SavingsCategory.stocks:
-        return 'Stocks';
-      case SavingsCategory.fixedDeposit:
-        return 'Fixed Deposit';
-      case SavingsCategory.ppf:
-        return 'PPF';
-      case SavingsCategory.other:
-        return 'Other';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -102,19 +80,19 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
         ? ref.watch(watchSavingsProvider)
         : ref.watch(watchSavingsByCategoryProvider(_selectedCategory!));
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Savings'), elevation: 0),
+    return GlassScaffold(
+      appBar: AppBar(title: const Text('Savings')),
       body: Column(
         children: [
           // Date Range Filter
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
             child: Row(
               children: [
                 Text(
-                  'Period:',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
+                  'Period',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -126,16 +104,18 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
                         final isSelected = _selectedDateRange == filter;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: FilterChip(
-                            label: Text(filter.label),
-                            selected: isSelected,
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedDateRange = filter;
-                                });
-                              }
-                            },
+                          child: GlassChips(
+                            child: FilterChip(
+                              label: Text(filter.label),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _selectedDateRange = filter;
+                                  });
+                                }
+                              },
+                            ),
                           ),
                         );
                       }).toList(),
@@ -151,38 +131,46 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
             height: 60,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               children: [
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
-                  child: FilterChip(
-                    label: const Text('All'),
-                    selected: _selectedCategory == null,
-                    onSelected: (selected) {
-                      setState(() {
-                        _selectedCategory = null;
-                      });
-                    },
+                  child: GlassChips(
+                    child: FilterChip(
+                      label: const Text('All'),
+                      selected: _selectedCategory == null,
+                      onSelected: (selected) {
+                        setState(() {
+                          _selectedCategory = null;
+                        });
+                      },
+                    ),
                   ),
                 ),
                 ...SavingsCategory.values.map((category) {
+                  final style = SavingsCategoryStyle.of(category);
+                  final isSelected = _selectedCategory == category;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: FilterChip(
-                      label: Text(_getCategoryLabel(category)),
-                      selected: _selectedCategory == category,
-                      onSelected: (selected) {
-                        setState(() {
-                          _selectedCategory = selected ? category : null;
-                        });
-                      },
+                    child: GlassChips(
+                      child: FilterChip(
+                        avatar: isSelected
+                            ? null
+                            : Icon(style.icon, size: 16, color: style.color),
+                        label: Text(style.label),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            _selectedCategory = selected ? category : null;
+                          });
+                        },
+                      ),
                     ),
                   );
                 }),
               ],
             ),
           ),
-          const Divider(height: 1),
 
           // Savings List
           Expanded(
@@ -201,42 +189,20 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
                 }).toList();
 
                 if (filteredSavings.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.savings_outlined,
-                          size: 80,
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          savings.isEmpty
-                              ? 'No savings yet'
-                              : 'No savings in this period',
-                          style: theme.textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          savings.isEmpty
-                              ? 'Add your first savings entry to get started'
-                              : 'Try selecting a different date range or category',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(
-                              alpha: 0.6,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  return EmptyState(
+                    icon: Icons.savings_rounded,
+                    color: AppColors.savings,
+                    title: savings.isEmpty
+                        ? 'No savings yet'
+                        : 'No savings in this period',
+                    message: savings.isEmpty
+                        ? 'Add your first savings entry to get started'
+                        : 'Try selecting a different date range or category',
                   );
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
                   itemCount: filteredSavings.length,
                   itemBuilder: (context, index) {
                     final saving = filteredSavings[index];
@@ -246,192 +212,166 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
                     final returnsPercentage = saving.investedAmountInCents > 0
                         ? (returns / saving.investedAmountInCents) * 100
                         : 0.0;
+                    final style = SavingsCategoryStyle.of(saving.category);
+                    final returnsColor = returns >= 0
+                        ? context.glass.income
+                        : context.glass.expense;
+                    final mutedSmall = theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    );
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
+                    return GlassCard(
+                      blur: false,
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AddEditSavingsScreen(savings: saving),
+                          ),
+                        );
+                      },
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            title: Text(
-                              saving.name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                          // Header: icon, name, category, returns badge
+                          Row(
+                            children: [
+                              GlassIcon(
+                                style.icon,
+                                color: style.color,
+                                size: 46,
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      saving.name,
+                                      style: theme.textTheme.titleMedium,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(style.label, style: mutedSmall),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SavingsReturnBadge(
+                                returnsInCents: returns,
+                                percentage: returnsPercentage,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Figures
+                          _Figure(
+                            label: 'Current Value',
+                            child: CurrencyText(
+                              amountInCents: saving.currentValueInCents,
+                              style: AppTypography.amount(24).copyWith(
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: _Figure(
+                                  label: 'Invested',
+                                  child: CurrencyText(
+                                    amountInCents: saving.investedAmountInCents,
+                                    style: AppTypography.amount(
+                                      15,
+                                      weight: FontWeight.w600,
+                                    ).copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _Figure(
+                                  label: 'Returns',
+                                  child: CurrencyText(
+                                    amountInCents: returns,
+                                    prefix: returns > 0 ? '+' : null,
+                                    style: AppTypography.amount(
+                                      15,
+                                      weight: FontWeight.w600,
+                                    ).copyWith(color: returnsColor),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (saving.maturityDate != null) ...[
+                            const SizedBox(height: 12),
+                            Row(
                               children: [
-                                const SizedBox(height: 4),
-                                Text(_getCategoryLabel(saving.category)),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Current Value',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                          ),
-                                          CurrencyText(
-                                            amountInCents:
-                                                saving.currentValueInCents,
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                  color:
-                                                      theme.colorScheme.primary,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Invested',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: theme
-                                                      .colorScheme
-                                                      .onSurface
-                                                      .withValues(alpha: 0.6),
-                                                ),
-                                          ),
-                                          CurrencyText(
-                                            amountInCents:
-                                                saving.investedAmountInCents,
-                                            style: theme.textTheme.bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
+                                Icon(
+                                  Icons.event_rounded,
+                                  size: 14,
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      returns >= 0
-                                          ? Icons.trending_up
-                                          : Icons.trending_down,
-                                      size: 16,
-                                      color: returns >= 0
-                                          ? Colors.green
-                                          : Colors.red,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    CurrencyText(
-                                      amountInCents: returns,
-                                      style: theme.textTheme.bodyMedium
-                                          ?.copyWith(
-                                            color: returns >= 0
-                                                ? Colors.green
-                                                : Colors.red,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '(${returnsPercentage.toStringAsFixed(2)}%)',
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: returns >= 0
-                                                ? Colors.green
-                                                : Colors.red,
-                                          ),
-                                    ),
-                                  ],
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Matures: ${DateFormat('MMM dd, yyyy').format(saving.maturityDate!)}',
+                                  style: mutedSmall,
                                 ),
-                                if (saving.maturityDate != null) ...[
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: theme.colorScheme.onSurface
-                                            .withValues(alpha: 0.6),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Matures: ${DateFormat('MMM dd, yyyy').format(saving.maturityDate!)}',
-                                        style: theme.textTheme.bodySmall
-                                            ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withValues(alpha: 0.6),
+                              ],
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+
+                          // Action buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddSavingsTransactionScreen(
+                                              savingsId: saving.id,
+                                              savingsName: saving.name,
                                             ),
                                       ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      AddEditSavingsScreen(savings: saving),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.add_rounded, size: 18),
+                                  label: const Text('Add'),
                                 ),
-                              );
-                            },
-                          ),
-                          // Action buttons
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              AddSavingsTransactionScreen(
-                                                savingsId: saving.id,
-                                                savingsName: saving.name,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.add, size: 18),
-                                    label: const Text('Add Transaction'),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SavingsDetailScreen(
+                                              savings: saving,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.history_rounded,
+                                    size: 18,
                                   ),
+                                  label: const Text('History'),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              SavingsDetailScreen(
-                                                savings: saving,
-                                              ),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.history, size: 18),
-                                    label: const Text('View History'),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -439,26 +379,14 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text('Error: $error'),
-                  ],
-                ),
-              ),
+              loading: () => const Center(child: LoadingIndicator()),
+              error: (error, stack) => ErrorView(message: 'Error: $error'),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: GradientFab(
+        tooltip: 'Add Savings',
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -466,8 +394,37 @@ class _SavingsListScreenState extends ConsumerState<SavingsListScreen> {
             ),
           );
         },
-        child: const Icon(Icons.add),
       ),
+    );
+  }
+}
+
+/// Small label + figure used on savings cards.
+class _Figure extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const _Figure({required this.label, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: child,
+        ),
+      ],
     );
   }
 }
