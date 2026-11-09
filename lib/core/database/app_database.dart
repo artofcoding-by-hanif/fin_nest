@@ -246,6 +246,9 @@ class AppDatabase extends _$AppDatabase {
     // Seed default categories
     await _seedDefaultCategories();
 
+    // Seed Savings category (savings deposits look it up by name)
+    await _seedSavingsCategory();
+
     // Seed default accounts
     await _seedDefaultAccounts();
 
@@ -496,9 +499,22 @@ class AppDatabase extends _$AppDatabase {
     debugPrint('Loan categories created');
   }
 
-  /// Seed Savings category (for migration to v7)
+  /// Seed Savings category (fresh installs and migration to v7).
+  ///
+  /// Skips if it already exists: a v1 database upgrading runs both the
+  /// initial seed (v2) and the v7 migration, and categories have no unique
+  /// constraint to prevent duplicates.
   Future<void> _seedSavingsCategory() async {
     try {
+      final existing = await categoriesDao.getCategoriesByType(
+        1,
+        CategoryType.expense,
+      );
+      if (existing.any((c) => c.name == 'Savings')) {
+        debugPrint('Savings category already exists');
+        return;
+      }
+
       await categoriesDao.createCategory(
         CategoriesCompanion.insert(
           userId: 1,
