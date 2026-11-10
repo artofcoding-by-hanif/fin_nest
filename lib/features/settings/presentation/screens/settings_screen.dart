@@ -13,6 +13,10 @@ import '../../../ai/data/ai_preferences.dart';
 import '../../../ai/data/ai_service.dart';
 import '../../../ai/presentation/ai_consent_sheet.dart';
 import '../../../data_export/presentation/providers/export_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../subscription/presentation/controllers/subscription_providers.dart';
+import '../../../subscription/presentation/paywall_screen.dart';
+import '../../../subscription/data/subscription_service.dart';
 
 /// Settings screen for app preferences
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -49,6 +53,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
+          // Premium
+          _SettingsGroup(
+            title: 'Premium',
+            children: _buildPremiumTiles(context),
+          ),
+
           // Theme Section
           _SettingsGroup(
             title: 'Appearance',
@@ -97,11 +107,102 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           if (kDebugMode)
             _SettingsGroup(
               title: 'Developer (debug only)',
-              children: [_buildAiTestTile(context)],
+              children: [
+                _buildAiTestTile(context),
+                _SettingsRow(
+                  icon: Icons.workspace_premium_rounded,
+                  color: AppColors.warning,
+                  title: 'Simulate Premium',
+                  subtitle:
+                      'App-side gates only; the server still applies free limits',
+                  trailing: Switch(
+                    value: ref.watch(debugPremiumOverrideProvider),
+                    onChanged: ref
+                        .read(debugPremiumOverrideProvider.notifier)
+                        .set,
+                  ),
+                  onTap: () => ref
+                      .read(debugPremiumOverrideProvider.notifier)
+                      .set(!ref.read(debugPremiumOverrideProvider)),
+                ),
+              ],
             ),
         ],
       ),
     );
+  }
+
+  bool _restoring = false;
+
+  List<Widget> _buildPremiumTiles(BuildContext context) {
+    final isPremium = ref.watch(isPremiumProvider);
+    final service = ref.read(subscriptionServiceProvider);
+
+    Future<void> restore() async {
+      setState(() => _restoring = true);
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        final found = await service.restore();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              found
+                  ? 'Premium restored. Welcome back!'
+                  : 'No active Premium purchase was found.',
+            ),
+          ),
+        );
+      } on PurchaseFailure catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+      } finally {
+        if (mounted) setState(() => _restoring = false);
+      }
+    }
+
+    return [
+      _SettingsRow(
+        icon: Icons.workspace_premium_rounded,
+        color: AppColors.warning,
+        title: isPremium ? 'FinNest Premium' : 'Upgrade to Premium',
+        subtitle: isPremium
+            ? 'Active. Thanks for your support!'
+            : 'More AI chat, suggestions and monthly reports',
+        trailing: const _Chevron(),
+        onTap: () => showPaywall(context),
+      ),
+      if (isPremium && service.isAvailable)
+        _SettingsRow(
+          icon: Icons.manage_accounts_rounded,
+          color: AppColors.blue,
+          title: 'Manage subscription',
+          subtitle: 'Change or cancel in Google Play',
+          trailing: const _Chevron(),
+          onTap: () async {
+            final url =
+                await service.managementUrl() ??
+                'https://play.google.com/store/account/subscriptions';
+            await launchUrl(
+              Uri.parse(url),
+              mode: LaunchMode.externalApplication,
+            );
+          },
+        ),
+      _SettingsRow(
+        icon: Icons.restore_rounded,
+        color: AppColors.cyan,
+        title: 'Restore purchases',
+        subtitle: 'Already subscribed on this Google account?',
+        enabled: !_restoring,
+        trailing: _restoring
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const _Chevron(),
+        onTap: restore,
+      ),
+    ];
   }
 
   List<Widget> _buildAiPrivacyTiles(BuildContext context) {
@@ -349,8 +450,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         value: settings.biometricEnabled,
         onChanged: (value) => _handleBiometricToggle(value, notifier),
       ),
-      onTap: () =>
-          _handleBiometricToggle(!settings.biometricEnabled, notifier),
+      onTap: () => _handleBiometricToggle(!settings.biometricEnabled, notifier),
     );
   }
 
@@ -554,9 +654,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       color: AppColors.savings,
       title: 'Export Data',
       subtitle: 'Backup all your data to a file',
-      trailing: exportState.isLoading
-          ? const _RowSpinner()
-          : const _Chevron(),
+      trailing: exportState.isLoading ? const _RowSpinner() : const _Chevron(),
       enabled: !exportState.isLoading,
       onTap: () => _handleExport(context, ref),
     );
@@ -570,9 +668,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       color: AppColors.expense,
       title: 'Import Data',
       subtitle: 'Restore data from a backup file',
-      trailing: importState.isLoading
-          ? const _RowSpinner()
-          : const _Chevron(),
+      trailing: importState.isLoading ? const _RowSpinner() : const _Chevron(),
       enabled: !importState.isLoading,
       onTap: () => _handleImport(context, ref),
     );

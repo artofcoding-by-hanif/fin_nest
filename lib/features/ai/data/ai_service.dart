@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/firebase/firebase_bootstrap.dart';
+import '../../subscription/data/subscription_service.dart';
 
 /// Why an AI call failed, so the UI can react (e.g. open the paywall)
 enum AiFailure { unavailable, quota, premiumRequired, invalid, notVerified, network }
@@ -158,6 +159,8 @@ class AiService {
 
     try {
       await FirebaseIdentity.ensureSignedIn();
+      // The server checks Premium by this uid, so purchases must be linked to it
+      await SubscriptionService.instance.identify().catchError((_) {});
       final result = await _functions
           .httpsCallable(name, options: HttpsCallableOptions(timeout: _timeout))
           .call(payload);

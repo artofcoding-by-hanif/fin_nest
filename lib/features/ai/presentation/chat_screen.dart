@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/glass/glass.dart';
 import '../data/ai_service.dart';
+import '../../subscription/presentation/paywall_screen.dart';
 import 'ai_consent_sheet.dart';
 import 'controllers/chat_controller.dart';
 import 'widgets/report_ai_content_sheet.dart';
@@ -28,7 +29,9 @@ class ChatScreen extends ConsumerStatefulWidget {
     if (!await ensureAiConsent(context, ref)) return;
     if (!context.mounted) return;
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ChatScreen(initialPrompt: initialPrompt)),
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(initialPrompt: initialPrompt),
+      ),
     );
   }
 
@@ -96,7 +99,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         titleSpacing: 0,
         title: Row(
           children: [
-            const GlassIcon(Icons.auto_awesome_rounded, color: AppColors.violet, size: 32, glow: false),
+            const GlassIcon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.violet,
+              size: 32,
+              glow: false,
+            ),
             const SizedBox(width: 10),
             Text('Ask FinNest', style: theme.textTheme.titleLarge),
           ],
@@ -157,7 +165,11 @@ class _EmptyChat extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
       children: [
         const Center(
-          child: GlassIcon(Icons.auto_awesome_rounded, color: AppColors.violet, size: 84),
+          child: GlassIcon(
+            Icons.auto_awesome_rounded,
+            color: AppColors.violet,
+            size: 84,
+          ),
         ),
         const SizedBox(height: 20),
         Text(
@@ -177,7 +189,12 @@ class _EmptyChat extends StatelessWidget {
         for (final s in starters)
           GlassTile(
             onTap: () => onTap(s),
-            leading: const GlassIcon(Icons.bolt_rounded, color: AppColors.cyan, size: 34, glow: false),
+            leading: const GlassIcon(
+              Icons.bolt_rounded,
+              color: AppColors.cyan,
+              size: 34,
+              glow: false,
+            ),
             title: Text(s, maxLines: 2),
             trailing: Icon(
               Icons.north_east_rounded,
@@ -257,7 +274,9 @@ class _UserBubble extends StatelessWidget {
         ),
         child: SelectableText(
           text,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.white),
         ),
       ),
     );
@@ -298,7 +317,11 @@ class _AiBubble extends StatelessWidget {
               blur: false,
               radius: 20,
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-              child: MarkdownBody(data: message.body, styleSheet: style, selectable: true),
+              child: MarkdownBody(
+                data: message.body,
+                styleSheet: style,
+                selectable: true,
+              ),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 6, top: 2),
@@ -316,11 +339,13 @@ class _AiBubble extends StatelessWidget {
                     color: muted,
                     icon: const Icon(Icons.copy_rounded),
                     onPressed: () async {
-                      await Clipboard.setData(ClipboardData(text: message.body));
+                      await Clipboard.setData(
+                        ClipboardData(text: message.body),
+                      );
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Copied')),
-                        );
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(const SnackBar(content: Text('Copied')));
                       }
                     },
                   ),
@@ -377,12 +402,19 @@ class _ErrorBubble extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
-                    wantsUpgrade ? Icons.workspace_premium_rounded : Icons.error_outline_rounded,
+                    wantsUpgrade
+                        ? Icons.workspace_premium_rounded
+                        : Icons.error_outline_rounded,
                     color: color,
                     size: 20,
                   ),
                   const SizedBox(width: 10),
-                  Expanded(child: Text(message.body, style: theme.textTheme.bodyMedium)),
+                  Expanded(
+                    child: Text(
+                      message.body,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ),
                 ],
               ),
               Row(
@@ -390,15 +422,24 @@ class _ErrorBubble extends ConsumerWidget {
                 children: [
                   if (wantsUpgrade)
                     TextButton(
-                      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('FinNest Premium is coming soon.')),
+                      onPressed: () => showPaywall(
+                        context,
+                        reason:
+                            ref
+                                    .read(chatControllerProvider)
+                                    .lastError
+                                    ?.reason ==
+                                AiFailure.premiumRequired
+                            ? PaywallReason.premiumFeature
+                            : PaywallReason.aiLimit,
                       ),
                       child: const Text('See Premium'),
                     )
                   else if (canRetry)
                     TextButton.icon(
-                      onPressed: () =>
-                          ref.read(chatControllerProvider.notifier).retry(message.id),
+                      onPressed: () => ref
+                          .read(chatControllerProvider.notifier)
+                          .retry(message.id),
                       icon: const Icon(Icons.refresh_rounded, size: 18),
                       label: const Text('Try again'),
                     ),
@@ -451,7 +492,9 @@ class _TypingBubbleState extends State<_TypingBubble>
                 for (var i = 0; i < 3; i++) ...[
                   if (i > 0) const SizedBox(width: 6),
                   Opacity(
-                    opacity: 0.35 + 0.65 * (1 - ((_c.value * 3 - i) % 3).clamp(0, 1)),
+                    opacity:
+                        0.35 +
+                        0.65 * (1 - ((_c.value * 3 - i) % 3).clamp(0, 1)),
                     child: Container(
                       width: 8,
                       height: 8,
@@ -483,8 +526,8 @@ class _Footer extends StatelessWidget {
     final quota = remaining == null
         ? null
         : state.premium
-            ? '$remaining messages left today'
-            : '$remaining free ${remaining == 1 ? 'message' : 'messages'} left today';
+        ? '$remaining messages left today'
+        : '$remaining free ${remaining == 1 ? 'message' : 'messages'} left today';
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 6),
       child: Text(
@@ -559,7 +602,10 @@ class _InputBar extends StatelessWidget {
                           gradient: AppColors.primaryGradient,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.arrow_upward_rounded, color: Colors.white),
+                        child: const Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
@@ -581,10 +627,13 @@ class _HistorySheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final conversations = ref.watch(chatConversationsProvider).value ?? const [];
+    final conversations =
+        ref.watch(chatConversationsProvider).value ?? const [];
     return SafeArea(
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -596,7 +645,10 @@ class _HistorySheet extends ConsumerWidget {
             if (conversations.isEmpty)
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-                child: Text('No saved chats yet.', style: theme.textTheme.bodyMedium),
+                child: Text(
+                  'No saved chats yet.',
+                  style: theme.textTheme.bodyMedium,
+                ),
               )
             else
               Flexible(
@@ -617,14 +669,21 @@ class _HistorySheet extends ConsumerWidget {
                           gradient: AppColors.expenseGradient,
                           borderRadius: BorderRadius.circular(AppTheme.radiusM),
                         ),
-                        child: const Icon(Icons.delete_rounded, color: Colors.white),
+                        child: const Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                        ),
                       ),
                       onDismissed: (_) async {
-                        final controller = ref.read(chatControllerProvider.notifier);
-                        if (ref.read(chatControllerProvider).conversationId == c.id) {
+                        final controller = ref.read(
+                          chatControllerProvider.notifier,
+                        );
+                        if (ref.read(chatControllerProvider).conversationId ==
+                            c.id) {
                           controller.newChat();
                         }
-                        await GetIt.instance<AppDatabase>().aiChatDao.deleteConversation(c.id);
+                        await GetIt.instance<AppDatabase>().aiChatDao
+                            .deleteConversation(c.id);
                       },
                       child: GlassTile(
                         onTap: () => onOpen(c.id),
@@ -635,7 +694,9 @@ class _HistorySheet extends ConsumerWidget {
                           glow: false,
                         ),
                         title: Text(c.title),
-                        subtitle: Text(DateFormat('d MMM, h:mm a').format(c.updatedAt)),
+                        subtitle: Text(
+                          DateFormat('d MMM, h:mm a').format(c.updatedAt),
+                        ),
                       ),
                     );
                   },

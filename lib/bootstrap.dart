@@ -11,6 +11,7 @@ import 'core/config/flavor_config.dart';
 import 'core/config/feature_flag_manager.dart';
 import 'core/database/app_database.dart';
 import 'core/firebase/firebase_bootstrap.dart';
+import 'features/subscription/data/subscription_service.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/background_task_service.dart';
 import 'core/services/settings_service.dart';
@@ -85,6 +86,8 @@ Future<void> bootstrap(Flavor flavor) async {
 
   // Online extras (AI, subscription check); the app works without them
   await FirebaseBootstrap.initialize(flavor);
+  // Store subscriptions (no-op until a RevenueCat key is set)
+  await SubscriptionService.instance.initialize();
 
   // Run the app
   runApp(const ProviderScope(child: App()));
