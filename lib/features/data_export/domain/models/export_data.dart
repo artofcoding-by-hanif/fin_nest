@@ -6,7 +6,7 @@ part 'export_data.g.dart';
 
 /// Export data model containing all app data
 @freezed
-class ExportData with _$ExportData {
+abstract class ExportData with _$ExportData {
   const factory ExportData({
     required ExportMetadata metadata,
     required ExportSettings settings,
@@ -19,7 +19,7 @@ class ExportData with _$ExportData {
 
 /// Export metadata
 @freezed
-class ExportMetadata with _$ExportMetadata {
+abstract class ExportMetadata with _$ExportMetadata {
   const factory ExportMetadata({
     required String version,
     required String appVersion,
@@ -33,7 +33,7 @@ class ExportMetadata with _$ExportMetadata {
 
 /// Export settings
 @freezed
-class ExportSettings with _$ExportSettings {
+abstract class ExportSettings with _$ExportSettings {
   const ExportSettings._();
 
   const factory ExportSettings({
@@ -84,7 +84,7 @@ class ExportSettings with _$ExportSettings {
 
 /// Export database data
 @freezed
-class ExportDatabaseData with _$ExportDatabaseData {
+abstract class ExportDatabaseData with _$ExportDatabaseData {
   const factory ExportDatabaseData({
     required List<Map<String, dynamic>> users,
     required List<Map<String, dynamic>> accounts,
@@ -104,7 +104,7 @@ class ExportDatabaseData with _$ExportDatabaseData {
 
 /// Import result
 @freezed
-class ImportResult with _$ImportResult {
+abstract class ImportResult with _$ImportResult {
   const factory ImportResult({
     required bool success,
     required String message,
@@ -118,7 +118,7 @@ class ImportResult with _$ImportResult {
 
 /// Import statistics
 @freezed
-class ImportStats with _$ImportStats {
+abstract class ImportStats with _$ImportStats {
   const ImportStats._();
 
   const factory ImportStats({

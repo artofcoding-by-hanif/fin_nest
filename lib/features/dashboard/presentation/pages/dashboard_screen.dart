@@ -21,6 +21,9 @@ import '../../../transactions/presentation/providers/recurring_transaction_provi
 import '../widgets/category_pie_chart.dart';
 import '../widgets/monthly_trends_chart.dart';
 import '../../../insights/presentation/widgets/insights_section.dart';
+import '../../../ai/data/ai_preferences.dart';
+import '../../../ai/presentation/chat_screen.dart';
+import '../../../../core/firebase/firebase_bootstrap.dart';
 
 /// Date range filter options for dashboard
 enum DateRangeFilter {
@@ -308,6 +311,7 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           _QuickActions(onOpen: (page) => _open(context, page)),
           const SizedBox(height: 24),
+          const _AskFinNestCard(),
           const InsightsSection(),
           const SizedBox(height: 24),
           _SavingsCard(onOpen: () => _open(context, const SavingsListScreen())),
@@ -363,6 +367,55 @@ class DashboardScreen extends ConsumerWidget {
       floatingActionButton: GradientFab(
         tooltip: 'Add expense',
         onPressed: () => _open(context, const AddExpenseScreen()),
+      ),
+    );
+  }
+}
+
+/// Entry to the AI assistant; hidden when AI is unavailable or turned off
+class _AskFinNestCard extends ConsumerWidget {
+  const _AskFinNestCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final prefs = ref.watch(aiPreferencesProvider);
+    if (!FirebaseBootstrap.isReady || (prefs.consentGiven && !prefs.enabled)) {
+      return const SizedBox.shrink();
+    }
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: GlassCard(
+        tint: AppColors.violet,
+        padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
+        onTap: () => ChatScreen.open(context, ref),
+        child: Row(
+          children: [
+            const GlassIcon(
+              Icons.auto_awesome_rounded,
+              color: AppColors.violet,
+              size: 44,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Ask FinNest', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Ask anything about your spending, budgets and savings',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
       ),
     );
   }

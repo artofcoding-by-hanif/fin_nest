@@ -6,9 +6,9 @@ part of 'category_budget_progress.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
-_$CategoryBudgetProgressImpl _$$CategoryBudgetProgressImplFromJson(
+_CategoryBudgetProgress _$CategoryBudgetProgressFromJson(
   Map<String, dynamic> json,
-) => _$CategoryBudgetProgressImpl(
+) => _CategoryBudgetProgress(
   categoryId: (json['categoryId'] as num).toInt(),
   categoryName: json['categoryName'] as String,
   categoryIcon: json['categoryIcon'] as String?,
@@ -20,8 +20,8 @@ _$CategoryBudgetProgressImpl _$$CategoryBudgetProgressImplFromJson(
   remainingInCents: (json['remainingInCents'] as num).toInt(),
 );
 
-Map<String, dynamic> _$$CategoryBudgetProgressImplToJson(
-  _$CategoryBudgetProgressImpl instance,
+Map<String, dynamic> _$CategoryBudgetProgressToJson(
+  _CategoryBudgetProgress instance,
 ) => <String, dynamic>{
   'categoryId': instance.categoryId,
   'categoryName': instance.categoryName,

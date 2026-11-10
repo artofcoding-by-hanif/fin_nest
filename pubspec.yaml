@@ -36,12 +36,11 @@ dependencies:
   cupertino_icons: ^1.0.8
   get_it: ^9.2.0
   flutter_riverpod: ^2.5.1
-  riverpod_annotation: ^2.3.5
   dio: ^5.9.1
-  drift: ^2.20.3
-  drift_flutter: ^0.2.0
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
+  drift: ^2.35.4
+  drift_flutter: ^0.3.0
+  freezed_annotation: ^3.1.0
+  json_annotation: ^4.12.0
   flutter_local_notifications: ^20.0.0
   path_provider: ^2.1.5
   path: ^1.9.1
@@ -61,6 +60,7 @@ dependencies:
   firebase_auth: ^7.0.1
   firebase_app_check: ^0.5.1
   cloud_functions: ^7.0.1
+  flutter_markdown_plus: ^1.0.12
 
 dev_dependencies:
   flutter_test:
@@ -74,11 +74,10 @@ dev_dependencies:
   flutter_lints: ^6.0.0
 
   # Code generation
-  build_runner: ^2.4.13
-  freezed: ^2.5.2
-  json_serializable: ^6.8.0
-  riverpod_generator: ^2.4.3
-  drift_dev: ^2.20.3
+  build_runner: ^2.17.1
+  freezed: ^4.0.3
+  json_serializable: ^6.15.2
+  drift_dev: ^2.35.3
 
   # App icon generation
   flutter_launcher_icons: ^0.14.1

@@ -7,7 +7,11 @@ import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/services/biometric_auth_service.dart';
 import '../../../../core/settings/app_settings.dart';
 import '../../../../core/widgets/glass/glass.dart';
+import 'package:get_it/get_it.dart';
+import '../../../../core/database/app_database.dart';
+import '../../../ai/data/ai_preferences.dart';
 import '../../../ai/data/ai_service.dart';
+import '../../../ai/presentation/ai_consent_sheet.dart';
 import '../../../data_export/presentation/providers/export_provider.dart';
 
 /// Settings screen for app preferences
@@ -83,6 +87,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
 
+          // AI & Privacy
+          _SettingsGroup(
+            title: 'AI & Privacy',
+            children: _buildAiPrivacyTiles(context),
+          ),
+
           // Developer tools (debug builds only)
           if (kDebugMode)
             _SettingsGroup(
@@ -92,6 +102,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildAiPrivacyTiles(BuildContext context) {
+    final prefs = ref.watch(aiPreferencesProvider);
+    final notifier = ref.read(aiPreferencesProvider.notifier);
+    final active = prefs.consentGiven && prefs.enabled;
+
+    Future<void> toggleAi(bool value) async {
+      if (value && !prefs.consentGiven) {
+        await showAiConsentSheet(context);
+      } else {
+        await notifier.setEnabled(value);
+      }
+    }
+
+    return [
+      _SettingsRow(
+        icon: Icons.auto_awesome_rounded,
+        color: AppColors.violet,
+        title: 'AI features',
+        subtitle: active
+            ? 'Ask FinNest and AI suggestions are on'
+            : 'Off: nothing is sent to the AI',
+        trailing: Switch(value: active, onChanged: toggleAi),
+        onTap: () => toggleAi(!active),
+      ),
+      _SettingsRow(
+        icon: Icons.receipt_long_rounded,
+        color: AppColors.cyan,
+        title: 'Share transaction descriptions',
+        subtitle: prefs.shareDescriptions
+            ? 'Recent descriptions are included for better answers'
+            : 'Only totals by category are sent',
+        enabled: active,
+        trailing: Switch(
+          value: prefs.shareDescriptions,
+          onChanged: active ? notifier.setShareDescriptions : null,
+        ),
+        onTap: () => notifier.setShareDescriptions(!prefs.shareDescriptions),
+      ),
+      _SettingsRow(
+        icon: Icons.shield_rounded,
+        color: context.glass.income,
+        title: 'What the AI sees',
+        subtitle: 'What is sent, and what never leaves your phone',
+        trailing: const _Chevron(),
+        onTap: () => showAiConsentSheet(context, reviewOnly: true),
+      ),
+      _SettingsRow(
+        icon: Icons.delete_sweep_rounded,
+        color: context.glass.expense,
+        title: 'Delete AI chat history',
+        subtitle: 'Removes all saved conversations from this phone',
+        trailing: const _Chevron(),
+        onTap: () async {
+          final ok = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete chat history?'),
+              content: const Text(
+                'All saved AI conversations on this phone will be deleted. '
+                'This cannot be undone.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.glass.expense,
+                  ),
+                  child: const Text('Delete'),
+                ),
+              ],
+            ),
+          );
+          if (ok != true) return;
+          await GetIt.instance<AppDatabase>().aiChatDao.deleteAll();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('AI chat history deleted')),
+            );
+          }
+        },
+      ),
+    ];
   }
 
   bool _aiTesting = false;

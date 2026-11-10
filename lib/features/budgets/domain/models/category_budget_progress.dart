@@ -48,7 +48,7 @@ enum BudgetStatus {
 
 /// Category budget progress model
 @freezed
-class CategoryBudgetProgress with _$CategoryBudgetProgress {
+abstract class CategoryBudgetProgress with _$CategoryBudgetProgress {
   const factory CategoryBudgetProgress({
     /// Category ID
     required int categoryId,

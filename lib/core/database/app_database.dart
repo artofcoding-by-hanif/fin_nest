@@ -16,6 +16,7 @@ import 'tables/goals_table.dart';
 import 'tables/recurring_transactions_table.dart';
 import 'tables/savings_table.dart';
 import 'tables/savings_transactions_table.dart';
+import 'tables/ai_chat_tables.dart';
 import 'daos/users_dao.dart';
 import 'daos/accounts_dao.dart';
 import 'daos/categories_dao.dart';
@@ -23,6 +24,7 @@ import 'daos/transactions_dao.dart';
 import 'daos/recurring_transactions_dao.dart';
 import 'daos/savings_dao.dart';
 import 'daos/savings_transactions_dao.dart';
+import 'daos/ai_chat_dao.dart';
 
 part 'app_database.g.dart';
 
@@ -39,6 +41,8 @@ part 'app_database.g.dart';
     RecurringTransactions,
     Savings,
     SavingsTransactions,
+    AiConversations,
+    AiMessages,
   ],
   daos: [
     UsersDao,
@@ -48,6 +52,7 @@ part 'app_database.g.dart';
     RecurringTransactionsDao,
     SavingsDao,
     SavingsTransactionsDao,
+    AiChatDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -60,7 +65,7 @@ class AppDatabase extends _$AppDatabase {
 
   /// Schema version
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// Migration strategy
   @override
@@ -134,6 +139,11 @@ class AppDatabase extends _$AppDatabase {
     // Version 8 -> 9: Add notification fields to recurring transactions
     if (from < 9) {
       await _migrateToV9(m);
+    }
+
+    // Version 9 -> 10: Add AI chat history tables
+    if (from < 10) {
+      await _migrateToV10(m);
     }
 
     // Add more migrations as needed
@@ -234,6 +244,13 @@ class AppDatabase extends _$AppDatabase {
     );
 
     debugPrint('Migration to v9 completed successfully');
+  }
+
+  /// Migration to version 10: AI chat history (kept on the device)
+  Future<void> _migrateToV10(Migrator m) async {
+    debugPrint('Migrating to version 10: Adding AI chat tables');
+    await m.createTable(aiConversations);
+    await m.createTable(aiMessages);
   }
 
   /// Seed initial data for new database

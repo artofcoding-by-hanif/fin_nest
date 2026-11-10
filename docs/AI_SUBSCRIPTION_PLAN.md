@@ -354,7 +354,16 @@ parallel.
 
 ---
 
-## 11. Open questions for you
+## 11. Decisions
+
+Agreed on 2026-11-10:
+
+- **Pricing:** ₹149/month and ₹999/year with a 7-day free trial on yearly.
+- **Free AI:** 3 chat messages a day plus the 1-card weekly suggestion preview.
+- **Region:** `asia-south1` (Mumbai), deployed.
+- **Quick add by sentence:** later phase (not in v1).
+
+## 11a. Original open questions
 
 1. **Pricing**: are ₹149/month and ₹999/year with a 7-day trial right, or do
    you want TankMind's prices?

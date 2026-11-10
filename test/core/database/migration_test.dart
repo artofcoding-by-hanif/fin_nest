@@ -25,7 +25,7 @@ void main() {
 
   group('Database schema', () {
     test('uses the current schema version', () {
-      expect(db.schemaVersion, 9);
+      expect(db.schemaVersion, 10);
     });
 
     test('creates every table', () async {
@@ -44,6 +44,8 @@ void main() {
         'recurring_transactions',
         'savings',
         'savings_transactions',
+        'ai_conversations',
+        'ai_messages',
       ]));
     });
 
@@ -61,6 +63,40 @@ void main() {
         names,
         containsAll(['enable_notifications', 'notification_minutes_before']),
       );
+    });
+  });
+
+  group('AI chat history', () {
+    test('stores conversations and messages, newest activity first', () async {
+      final chat = db.aiChatDao;
+      final first = await chat.createConversation('Where did my money go?');
+      final second = await chat.createConversation('Can I save more?');
+      await chat.addMessage(conversationId: first, fromUser: true, body: 'Hi');
+      await chat.addMessage(conversationId: first, fromUser: false, body: 'Hello!');
+
+      final messages = await chat.getMessages(first);
+      expect(messages.map((m) => m.body), ['Hi', 'Hello!']);
+      expect(messages.first.fromUser, isTrue);
+      expect(messages.last.isError, isFalse);
+
+      final conversations = await chat.watchConversations().first;
+      expect(conversations.first.id, first); // bumped by the new messages
+      expect(conversations.map((c) => c.id), containsAll([first, second]));
+    });
+
+    test('deleting a conversation removes its messages', () async {
+      final chat = db.aiChatDao;
+      final id = await chat.createConversation('Temp');
+      await chat.addMessage(conversationId: id, fromUser: true, body: 'x');
+      await chat.deleteConversation(id);
+      expect(await chat.getMessages(id), isEmpty);
+    });
+
+    test('long titles are shortened', () async {
+      final chat = db.aiChatDao;
+      final id = await chat.createConversation('a' * 200);
+      final c = (await chat.watchConversations().first).firstWhere((c) => c.id == id);
+      expect(c.title.length, lessThanOrEqualTo(120));
     });
   });
 

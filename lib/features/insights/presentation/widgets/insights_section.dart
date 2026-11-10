@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/firebase/firebase_bootstrap.dart';
 import '../../../../core/widgets/glass/glass.dart';
+import '../../../ai/data/ai_preferences.dart';
+import '../../../ai/presentation/chat_screen.dart';
 import '../../../transactions/presentation/screens/add_expense_screen.dart';
 import '../../../transactions/presentation/screens/recurring_transactions_list_screen.dart';
 import '../../../transactions/presentation/screens/transaction_list_screen.dart';
@@ -81,6 +84,11 @@ class InsightCard extends ConsumerWidget {
         ? null
         : ref.watch(insightCategoriesProvider)[insight.categoryId];
     final hasAction = insight.action != InsightAction.none;
+    final prefs = ref.watch(aiPreferencesProvider);
+    final canAsk =
+        FirebaseBootstrap.isReady &&
+        !(prefs.consentGiven && !prefs.enabled) &&
+        insight.id != 'getting-started';
 
     return GlassCard(
       blur: false,
@@ -118,7 +126,10 @@ class InsightCard extends ConsumerWidget {
                   color: toneColor,
                   shape: BoxShape.circle,
                   boxShadow: [
-                    BoxShadow(color: toneColor.withValues(alpha: 0.6), blurRadius: 6),
+                    BoxShadow(
+                      color: toneColor.withValues(alpha: 0.6),
+                      blurRadius: 6,
+                    ),
                   ],
                 ),
               ),
@@ -136,25 +147,58 @@ class InsightCard extends ConsumerWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          if (hasAction)
+          if (hasAction || canAsk)
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Text(
-                  switch (insight.action) {
-                    InsightAction.viewRecurring => 'View bills',
-                    InsightAction.addTransaction => 'Add expense',
-                    _ => 'View history',
-                  },
-                  style: theme.textTheme.labelMedium?.copyWith(
+                if (canAsk)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(100),
+                    onTap: () => ChatScreen.open(
+                      context,
+                      ref,
+                      initialPrompt:
+                          'Explain this insight using my numbers and tell me what to do about it: '
+                          '"${insight.title}". ${insight.body}',
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: AppColors.violet,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Ask AI',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: AppColors.violet,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const Spacer(),
+                if (hasAction) ...[
+                  Text(
+                    switch (insight.action) {
+                      InsightAction.viewRecurring => 'View bills',
+                      InsightAction.addTransaction => 'Add expense',
+                      _ => 'View history',
+                    },
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    size: 16,
                     color: theme.colorScheme.primary,
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 16,
-                  color: theme.colorScheme.primary,
-                ),
+                ],
               ],
             ),
         ],
