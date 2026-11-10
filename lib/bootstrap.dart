@@ -10,6 +10,7 @@ import 'app.dart';
 import 'core/config/flavor_config.dart';
 import 'core/config/feature_flag_manager.dart';
 import 'core/database/app_database.dart';
+import 'core/firebase/firebase_bootstrap.dart';
 import 'core/services/notification_service.dart';
 import 'core/services/background_task_service.dart';
 import 'core/services/settings_service.dart';
@@ -82,10 +83,8 @@ Future<void> bootstrap(Flavor flavor) async {
   // Initialize background task service
   await _initializeBackgroundTasks();
 
-  // TODO: Initialize Firebase (if using)
-  // await Firebase.initializeApp(
-  //   options: DefaultFirebaseOptions.currentPlatform,
-  // );
+  // Online extras (AI, subscription check); the app works without them
+  await FirebaseBootstrap.initialize(flavor);
 
   // Run the app
   runApp(const ProviderScope(child: App()));

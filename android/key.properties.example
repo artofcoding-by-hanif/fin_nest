@@ -1,0 +1,8 @@
+# Copy to android/key.properties (git-ignored) and fill in.
+# storeFile is resolved relative to android/app/, so use an absolute path.
+# Create the keystore once (and back it up; losing it means no more updates):
+#   keytool -genkey -v -keystore ~/finnest-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+storeFile=/Users/you/finnest-upload.jks
+storePassword=
+keyAlias=upload
+keyPassword=

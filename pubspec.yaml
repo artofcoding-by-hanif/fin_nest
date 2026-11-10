@@ -56,6 +56,12 @@ dependencies:
   local_auth: ^2.3.0
   flutter_secure_storage: ^9.2.2
 
+  # Online extras (AI assistant). The app runs offline without Firebase.
+  firebase_core: ^5.1.0
+  firebase_auth: ^7.0.1
+  firebase_app_check: ^0.5.1
+  cloud_functions: ^7.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
