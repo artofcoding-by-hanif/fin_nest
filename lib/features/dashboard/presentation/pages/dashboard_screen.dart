@@ -20,6 +20,7 @@ import '../../../transactions/presentation/screens/transaction_list_screen.dart'
 import '../../../transactions/presentation/providers/recurring_transaction_provider.dart';
 import '../widgets/category_pie_chart.dart';
 import '../widgets/monthly_trends_chart.dart';
+import '../../../insights/presentation/widgets/insights_section.dart';
 
 /// Date range filter options for dashboard
 enum DateRangeFilter {
@@ -306,6 +307,8 @@ class DashboardScreen extends ConsumerWidget {
           const _BalanceHero(),
           const SizedBox(height: 24),
           _QuickActions(onOpen: (page) => _open(context, page)),
+          const SizedBox(height: 24),
+          const InsightsSection(),
           const SizedBox(height: 24),
           _SavingsCard(onOpen: () => _open(context, const SavingsListScreen())),
           const _UpcomingSection(),

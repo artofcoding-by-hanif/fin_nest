@@ -46,13 +46,31 @@ class CurrencyText extends ConsumerWidget {
   }
 }
 
+/// Formats [amountInCents] with explicit currency settings, for code that
+/// has no WidgetRef (providers, engines). [decimalDigits] overrides the
+/// currency's default (e.g. 0 for "₹26,000").
+String formatMoney(
+  int amountInCents,
+  CurrencyConfig currency,
+  CurrencyFormat format, {
+  bool compact = false,
+  int? decimalDigits,
+}) => _formatAmount(
+  amountInCents / 100.0,
+  currency,
+  format,
+  compact,
+  decimalDigits: decimalDigits,
+);
+
 /// Helper function to format amount with currency settings
 String _formatAmount(
   double amount,
   CurrencyConfig currency,
   CurrencyFormat format,
-  bool compact,
-) {
+  bool compact, {
+  int? decimalDigits,
+}) {
   String baseFormatted;
 
   if (compact) {
@@ -66,7 +84,7 @@ String _formatAmount(
     final formatter = NumberFormat.currency(
       symbol: '',
       locale: currency.locale,
-      decimalDigits: currency.decimalDigits,
+      decimalDigits: decimalDigits ?? currency.decimalDigits,
     );
     baseFormatted = formatter.format(amount).trim();
   }
