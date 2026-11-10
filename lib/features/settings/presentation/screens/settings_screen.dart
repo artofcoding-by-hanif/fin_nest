@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:local_auth/local_auth.dart';
@@ -6,6 +7,7 @@ import '../../../../core/providers/settings_provider.dart';
 import '../../../../core/services/biometric_auth_service.dart';
 import '../../../../core/settings/app_settings.dart';
 import '../../../../core/widgets/glass/glass.dart';
+import '../../../ai/data/ai_service.dart';
 import '../../../data_export/presentation/providers/export_provider.dart';
 
 /// Settings screen for app preferences
@@ -80,8 +82,84 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _buildImportDataTile(context, ref),
             ],
           ),
+
+          // Developer tools (debug builds only)
+          if (kDebugMode)
+            _SettingsGroup(
+              title: 'Developer (debug only)',
+              children: [_buildAiTestTile(context)],
+            ),
         ],
       ),
+    );
+  }
+
+  bool _aiTesting = false;
+
+  /// Debug: sends a tiny made-up finance sample to the aiChat function to
+  /// check Firebase, App Check, the function and Gemini end to end.
+  Widget _buildAiTestTile(BuildContext context) {
+    return _SettingsRow(
+      icon: Icons.auto_awesome_rounded,
+      color: AppColors.violet,
+      title: 'Test AI connection',
+      subtitle: 'Sends sample data (not yours) to aiChat',
+      enabled: !_aiTesting,
+      trailing: _aiTesting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : null,
+      onTap: () async {
+        setState(() => _aiTesting = true);
+        String title;
+        String body;
+        try {
+          final result = await AiService.instance.chat(
+            financeContext: const {
+              'currency': 'INR',
+              'monthly': [
+                {
+                  'month': '2026-10',
+                  'income': 100000,
+                  'expense': 62000,
+                  'byCategory': {'Food & Dining': 14000, 'Shopping': 9000},
+                },
+              ],
+            },
+            history: const [
+              AiChatTurn(
+                fromUser: true,
+                text: 'In one sentence: what was my savings rate last month?',
+              ),
+            ],
+          );
+          title = 'AI connection OK';
+          body =
+              '${result.value}\n\nRemaining today: ${result.remaining} '
+              '(${result.premium ? 'Premium' : 'Free'} plan)';
+        } on AiException catch (e) {
+          title = 'AI call failed';
+          body = '${e.message}\n\nReason: ${e.reason.name}';
+        }
+        if (!context.mounted) return;
+        setState(() => _aiTesting = false);
+        await showDialog<void>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(title),
+            content: Text(body),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

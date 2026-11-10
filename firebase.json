@@ -1,0 +1,45 @@
+{
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log",
+        "src/**/*.test.ts"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run build"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {},
+      "dart": {
+        "lib/firebase_options_development.dart": {
+          "projectId": "finnest-cf874",
+          "configurations": {
+            "android": "1:1003569970493:android:84050bde394d32cce95954"
+          }
+        },
+        "lib/firebase_options_staging.dart": {
+          "projectId": "finnest-cf874",
+          "configurations": {
+            "android": "1:1003569970493:android:b865756ab5ecc112e95954"
+          }
+        },
+        "lib/firebase_options_production.dart": {
+          "projectId": "finnest-cf874",
+          "configurations": {
+            "android": "1:1003569970493:android:2c95feb62cd3728ce95954"
+          }
+        }
+      }
+    }
+  }
+}
